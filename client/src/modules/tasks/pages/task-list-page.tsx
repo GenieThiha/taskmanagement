@@ -63,6 +63,8 @@ export function TaskListPage() {
       {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <select
+          id="filter-status"
+          name="filter-status"
           className="border border-gray-200 rounded-md px-3 py-1.5 text-sm"
           value={filters.status ?? ''}
           onChange={(e) => setFilters({ status: e.target.value as TaskStatus || undefined })}
@@ -74,6 +76,8 @@ export function TaskListPage() {
           <option value="done">Done</option>
         </select>
         <select
+          id="filter-priority"
+          name="filter-priority"
           className="border border-gray-200 rounded-md px-3 py-1.5 text-sm"
           value={filters.priority ?? ''}
           onChange={(e) => setFilters({ priority: e.target.value as TaskPriority || undefined })}
