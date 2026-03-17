@@ -46,6 +46,7 @@ services:
       JWT_EXPIRES_IN: 15m
       REFRESH_EXPIRES_IN: 7d
       CORS_ORIGINS: http://localhost:5173
+      APP_URL: http://localhost:5173
       SES_REGION: ap-southeast-1
       SES_FROM: noreply@tma.internal
     restart: unless-stopped
