@@ -68,10 +68,10 @@ export function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Welcome back, {user?.full_name ?? 'User'}!
         </h1>
-        <p className="text-gray-500 text-sm mt-1">Here's what's happening today.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Here's what's happening today.</p>
       </div>
 
       {loading ? (
@@ -82,7 +82,7 @@ export function DashboardPage() {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total Tasks" count={totalTasks} color="text-gray-700" />
+            <KpiCard label="Total Tasks" count={totalTasks} color="text-gray-700 dark:text-gray-300" />
             <KpiCard label="In Progress" count={inProgressCount} color="text-blue-600" />
             <KpiCard label="Completed" count={doneCount} color="text-green-600" />
             <KpiCard label="My Tasks" count={myTasksCount} color="text-purple-600" />
