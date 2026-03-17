@@ -72,7 +72,13 @@ export async function createTask(
   return task;
 }
 
-export async function getTask(id: string) {
+export async function getTask(
+  id: string,
+  commentPage = 1,
+  commentLimit = 20
+) {
+  const commentOffset = (commentPage - 1) * commentLimit;
+
   const task = await Task.findOne({
     where: { id, is_deleted: false },
     include: [
@@ -81,6 +87,12 @@ export async function getTask(id: string) {
         as: 'comments',
         where: { is_deleted: false },
         required: false,
+        // `separate: true` runs comments as a second query so that limit/offset
+        // apply only to comments and don't interfere with the parent row count.
+        separate: true,
+        limit: commentLimit,
+        offset: commentOffset,
+        order: [['created_at', 'ASC']],
         include: [
           { model: User, as: 'author', attributes: ['id', 'full_name', 'email'] },
         ],

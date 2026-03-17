@@ -9,7 +9,9 @@ export const mailer = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: process.env.SES_SMTP_USER,
-    pass: process.env.SES_SMTP_PASS,
+    // Read through the validated env module so a missing value is caught at
+    // startup rather than silently failing on the first sendMail call.
+    user: env.SES_SMTP_USER,
+    pass: env.SES_SMTP_PASS,
   },
 });

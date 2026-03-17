@@ -44,6 +44,11 @@ export const addCommentSchema = Joi.object({
   body: Joi.string().min(1).max(5000).required(),
 });
 
+export const getTaskQuerySchema = Joi.object({
+  comment_page: Joi.number().integer().min(1).default(1),
+  comment_limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
 export const taskFiltersSchema = Joi.object({
   project_id: Joi.string().uuid().optional(),
   assignee_id: Joi.string().uuid().optional(),

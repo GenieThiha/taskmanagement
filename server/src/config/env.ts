@@ -1,7 +1,17 @@
 const NODE_ENV = process.env.NODE_ENV ?? 'development';
 const isTest = NODE_ENV === 'test';
 
-const required = ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'REFRESH_SECRET'];
+const required = [
+  'DATABASE_URL',
+  'REDIS_URL',
+  'JWT_SECRET',
+  'REFRESH_SECRET',
+  // APP_URL must be set so password-reset links are correct in every environment.
+  'APP_URL',
+  // SES credentials must be present so the mailer can authenticate on startup.
+  'SES_SMTP_USER',
+  'SES_SMTP_PASS',
+];
 
 if (!isTest) {
   const missing = required.filter((key) => !process.env[key]);
@@ -23,7 +33,11 @@ export const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? '15m',
   REFRESH_EXPIRES_IN: process.env.REFRESH_EXPIRES_IN ?? '7d',
   CORS_ORIGINS: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(','),
+  // Required in all non-test environments (enforced by the check above).
   APP_URL: process.env.APP_URL ?? 'http://localhost:5173',
   SES_REGION: process.env.SES_REGION ?? 'ap-southeast-1',
   SES_FROM: process.env.SES_FROM ?? 'noreply@tma.internal',
+  // Routed through env so validation catches a missing value on startup.
+  SES_SMTP_USER: process.env.SES_SMTP_USER ?? '',
+  SES_SMTP_PASS: process.env.SES_SMTP_PASS ?? '',
 };

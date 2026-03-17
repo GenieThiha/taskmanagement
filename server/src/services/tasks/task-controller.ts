@@ -33,7 +33,11 @@ export async function getTask(
   next: NextFunction
 ): Promise<void> {
   try {
-    const task = await taskService.getTask(req.params.id);
+    const { comment_page, comment_limit } = req.query as {
+      comment_page?: number;
+      comment_limit?: number;
+    };
+    const task = await taskService.getTask(req.params.id, comment_page, comment_limit);
     res.json({ data: task });
   } catch (err) {
     next(err);

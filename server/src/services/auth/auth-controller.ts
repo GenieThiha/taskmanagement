@@ -6,7 +6,9 @@ import * as authService from './auth-service';
 const REFRESH_COOKIE = 'refresh_token';
 const refreshCookieOptions = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
+  // Secure flag is on in every environment except local development so that
+  // staging (which runs over real HTTPS on AWS) also protects the cookie.
+  secure: env.NODE_ENV !== 'development',
   sameSite: 'strict' as const,
   // Path scoped to the auth prefix so the cookie is only sent to /v1/auth/*
   // and never to task/user/project endpoints.
