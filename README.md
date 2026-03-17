@@ -83,7 +83,7 @@ PostgreSQL 16            Redis 7
 │   └── workflows/
 │       ├── ci.yml           # Lint + test + audit on every feature branch / PR
 │       └── deploy.yml       # Build → ECR → staging (auto) → production (manual gate)
-├── docker-compose.yml       # Local dev: postgres + redis + server + client
+├── docker-compose.yml       # Local dev: mailhog + postgres + redis + server + client
 └── TMA_HLD_Waterfall.pdf    # Authoritative HLD reference
 ```
 
@@ -102,16 +102,20 @@ PostgreSQL 16            Redis 7
 docker compose up --build
 ```
 
-| Service | URL |
-|---|---|
-| React SPA | http://localhost:5173 |
-| Express API | http://localhost:3000 |
-| PostgreSQL | localhost:5433 |
-| Redis | localhost:6379 |
+| Service | URL | Notes |
+|---|---|---|
+| React SPA | http://localhost:5173 | Vite HMR — changes to `client/src/` live-reload instantly |
+| Express API | http://localhost:3000 | nodemon — changes to `server/src/` restart automatically |
+| Mailhog (web UI) | http://localhost:8025 | Catches all outbound email in dev — open here to read them |
+| PostgreSQL | localhost:5433 | Host port 5433 avoids clashing with a local PostgreSQL install |
+| Redis | localhost:6379 | Standard port |
 
-The server starts with **nodemon + ts-node** (hot-reload on save).
-The client starts the **Vite dev server** (HMR on save).
-The client waits for the server `/health` check before starting.
+The server waits for Postgres and Redis health checks before starting.
+The client waits for the server `/health` endpoint before starting.
+
+### Local email (Mailhog)
+
+In development all emails (password reset, notifications) are intercepted by **Mailhog** — nothing reaches a real mail server. To read a caught email open **http://localhost:8025** after triggering the action (e.g. forgot-password). No SES credentials are needed locally.
 
 ### Run without Docker
 
@@ -141,18 +145,20 @@ npx sequelize-cli db:seed:all         # load seed data
 Copy `.env.development` in each service and adjust as needed.
 **Never commit secrets.** Production secrets are managed via AWS Secrets Manager.
 
-| Variable | Service | Description |
-|---|---|---|
-| `DATABASE_URL` | server | PostgreSQL connection string |
-| `REDIS_URL` | server | Redis connection string |
-| `JWT_SECRET` | server | Access token signing key |
-| `REFRESH_SECRET` | server | Refresh token signing key |
-| `APP_URL` | server | Base URL for password reset emails |
-| `CORS_ORIGINS` | server | Comma-separated allowed origins |
-| `SES_SMTP_USER` | server | AWS SES SMTP username |
-| `SES_SMTP_PASS` | server | AWS SES SMTP password |
-| `VITE_API_BASE_URL` | client | API base URL (`/v1`) |
-| `VITE_SOCKET_URL` | client | Socket.io server URL |
+| Variable | Service | Required | Description |
+|---|---|---|---|
+| `DATABASE_URL` | server | always | PostgreSQL connection string |
+| `REDIS_URL` | server | always | Redis connection string |
+| `JWT_SECRET` | server | always | Access token signing key |
+| `REFRESH_SECRET` | server | always | Refresh token signing key |
+| `APP_URL` | server | always | Base URL for password reset links |
+| `CORS_ORIGINS` | server | always | Comma-separated allowed origins |
+| `SES_SMTP_USER` | server | **production only** | AWS SES SMTP username — dev uses Mailhog |
+| `SES_SMTP_PASS` | server | **production only** | AWS SES SMTP password — dev uses Mailhog |
+| `VITE_API_BASE_URL` | client | **production only** | HTTPS API base URL (`/v1`) — build fails without it in prod |
+| `VITE_SOCKET_URL` | client | **production only** | WSS Socket.io URL — build fails without it in prod |
+
+> **Note:** `VITE_API_BASE_URL` and `VITE_SOCKET_URL` fall back to `http://localhost:*` for local dev only. A production Vite build (`NODE_ENV=production`) throws at startup if either is absent, preventing credentials from being sent over plain HTTP.
 
 ---
 
@@ -183,12 +189,19 @@ npm run coverage
 | Group | Prefix | Auth | Notes |
 |---|---|---|---|
 | Auth | `/auth` | Public (except `/logout`) | Register, login, refresh, logout, forgot/reset password |
-| Tasks | `/tasks` | Required | Full CRUD + `POST /tasks/:id/comments` |
+| Tasks | `/tasks` | Required | Full CRUD + `POST /tasks/:id/comments` + `GET /tasks/stats` |
 | Projects | `/projects` | Required | manager+ to create; admin to archive |
 | Users | `/users` | Required | Admin-only list; self or admin for PATCH |
 | Notifications | `/notifications` | Required | List + mark-as-read |
 
 **Token TTLs:** access token **15 min** · refresh token **7 days** (httpOnly cookie, rotated on each refresh)
+
+### Notable endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/tasks/stats` | Returns `{ todo, in_progress, review, done }` counts in one query — used by the dashboard |
+| `GET` | `/tasks/:id?comment_page=1&comment_limit=20` | Paginated comments on a single task (default page 1, up to 100 per page) |
 
 ---
 
@@ -216,16 +229,18 @@ Users ──< Projects
 
 | Control | Implementation |
 |---|---|
-| Authentication | JWT (HS256) — access token in memory, refresh token in httpOnly cookie |
-| Token invalidation | Logout blocklists `jti` in Redis; refresh tokens rotated on every use |
+| Authentication | JWT (HS256) — access token in memory only (never persisted), refresh token in `httpOnly; SameSite=Strict` cookie |
+| Cookie scope | `Secure` flag on in staging + production (`NODE_ENV !== development`); path scoped to `/v1/auth` |
+| Token invalidation | Logout blocklists `jti` in Redis (TTL = remaining token lifetime); refresh tokens rotated on every use via cursor-based `SCAN` |
 | RBAC | `admin > manager > member` enforced at middleware level (`requireRole`) |
 | Rate limiting | 100 req/min global · 10 req/min on `/auth` — Redis-backed per IP |
-| Input validation | Joi schemas on all POST/PUT/PATCH routes before service layer |
+| Input validation | Joi schemas on all POST/PUT/PATCH routes + query params before service layer; `stripUnknown: true` |
 | SQL injection | Sequelize parameterised queries only — no raw string interpolation |
 | Password hashing | bcrypt cost factor 12 |
 | Account lockout | 5 consecutive failures → 30-minute block |
-| Security headers | Helmet (HSTS, CSP, X-Frame-Options, …) |
-| CORS | Whitelist only; `X-Requested-With` required; no-origin blocked outside dev |
+| Security headers | Helmet — HSTS 1 year + preload, CSP (`default-src 'self'`, no `unsafe-inline`), X-Frame-Options |
+| CORS | Whitelist only; `X-Requested-With` required as CSRF mitigation; no-origin requests blocked outside `development` |
+| Production build guard | `VITE_API_BASE_URL` and `VITE_SOCKET_URL` throw at startup if absent — prevents credentials over plain HTTP |
 | Secrets | AWS Secrets Manager — never committed to SCM |
 
 ---
