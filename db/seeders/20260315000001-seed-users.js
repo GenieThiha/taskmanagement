@@ -1,9 +1,9 @@
 'use strict';
 
-const bcrypt = require('bcrypt');
-
-const COST = 12;
-const PASSWORD = 'Password123!';
+// Pre-computed bcrypt hash (cost 12) of 'Password123!'
+// Hard-coded so the seeder has no native-module dependency and can run
+// from the host machine against the Docker-mapped postgres port.
+const PASSWORD_HASH = '$2b$12$9L2yKMV.vBYTkHT997CeI.fpxAMWbydukwGpo8XwCir2nDPZ.pRNy';
 
 // Fixed UUIDs so FK relationships work across seeders
 const USER_IDS = {
@@ -17,14 +17,13 @@ const USER_IDS = {
 
 module.exports = {
   async up(queryInterface) {
-    const hash = await bcrypt.hash(PASSWORD, COST);
     const now = new Date();
 
     await queryInterface.bulkInsert('users', [
       {
         id: USER_IDS.admin,
         email: 'admin@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'Alice Admin',
         role: 'admin',
         is_active: true,
@@ -36,7 +35,7 @@ module.exports = {
       {
         id: USER_IDS.manager1,
         email: 'bob.manager@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'Bob Manager',
         role: 'manager',
         is_active: true,
@@ -48,7 +47,7 @@ module.exports = {
       {
         id: USER_IDS.manager2,
         email: 'carol.manager@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'Carol Manager',
         role: 'manager',
         is_active: true,
@@ -60,7 +59,7 @@ module.exports = {
       {
         id: USER_IDS.member1,
         email: 'david.member@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'David Member',
         role: 'member',
         is_active: true,
@@ -72,7 +71,7 @@ module.exports = {
       {
         id: USER_IDS.member2,
         email: 'eve.member@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'Eve Member',
         role: 'member',
         is_active: true,
@@ -84,7 +83,7 @@ module.exports = {
       {
         id: USER_IDS.member3,
         email: 'frank.member@tma.internal',
-        password_hash: hash,
+        password_hash: PASSWORD_HASH,
         full_name: 'Frank Member',
         role: 'member',
         is_active: true,
