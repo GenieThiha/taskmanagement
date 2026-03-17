@@ -1,22 +1,32 @@
 const NODE_ENV = process.env.NODE_ENV ?? 'development';
 const isTest = NODE_ENV === 'test';
+const isProduction = NODE_ENV === 'production';
 
+// Required in every non-test environment (dev + staging + production).
 const required = [
   'DATABASE_URL',
   'REDIS_URL',
   'JWT_SECRET',
   'REFRESH_SECRET',
-  // APP_URL must be set so password-reset links are correct in every environment.
+  // APP_URL must be set so password-reset links point to the right host.
   'APP_URL',
-  // SES credentials must be present so the mailer can authenticate on startup.
-  'SES_SMTP_USER',
-  'SES_SMTP_PASS',
 ];
+
+// SES credentials are only needed in production — development uses Mailhog
+// (a local SMTP catch-all) so no real credentials are required.
+const requiredInProduction = ['SES_SMTP_USER', 'SES_SMTP_PASS'];
 
 if (!isTest) {
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+
+if (isProduction) {
+  const missing = requiredInProduction.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
   }
 }
 

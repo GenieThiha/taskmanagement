@@ -1,4 +1,10 @@
 services:
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - '1025:1025'   # SMTP — server connects here
+      - '8025:8025'   # Web UI — open http://localhost:8025 to read caught emails
+
   postgres:
     image: postgres:16
     environment:
@@ -30,6 +36,8 @@ services:
       context: ./server
       target: development
     depends_on:
+      mailhog:
+        condition: service_started
       postgres:
         condition: service_healthy
       redis:
@@ -49,6 +57,7 @@ services:
       APP_URL: http://localhost:5173
       SES_REGION: ap-southeast-1
       SES_FROM: noreply@tma.internal
+      # No SES credentials needed in dev — mailer routes to Mailhog instead.
     volumes:
       # Mount only src/ for nodemon hot-reload.
       # node_modules stays as built inside the container (linux-native binaries).
