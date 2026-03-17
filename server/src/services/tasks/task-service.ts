@@ -105,13 +105,13 @@ export async function getTask(
   const task = await Task.findOne({
     where: { id, is_deleted: false },
     include: [
+      // Cast to `any`: Sequelize 6 IncludeOptions types omit `limit`/`offset`
+      // even though both are valid (and required) when `separate: true` is set.
       {
         model: Comment,
         as: 'comments',
         where: { is_deleted: false },
         required: false,
-        // `separate: true` runs comments as a second query so that limit/offset
-        // apply only to comments and don't interfere with the parent row count.
         separate: true,
         limit: commentLimit,
         offset: commentOffset,
@@ -119,7 +119,7 @@ export async function getTask(
         include: [
           { model: User, as: 'author', attributes: ['id', 'full_name', 'email'] },
         ],
-      },
+      } as any,
       { model: User, as: 'assignee', attributes: ['id', 'full_name', 'email'] },
       { model: User, as: 'reporter', attributes: ['id', 'full_name', 'email'] },
       { model: Project, as: 'project', attributes: ['id', 'name'] },
