@@ -2,6 +2,7 @@ import http from 'http';
 import { createApp } from './app';
 import { env } from './config/env';
 import { sequelize } from './models/index';
+import { redisClient } from './config/redis';
 import { initSocketServer } from './socket/socket-server';
 import { startDueSoonJob } from './services/notifications/due-soon-job';
 import { logger } from './logger/logger';
@@ -38,6 +39,7 @@ async function bootstrap() {
     logger.info(`${signal} received — shutting down gracefully`);
     httpServer.close(async () => {
       await sequelize.close();
+      await redisClient.quit();
       logger.info('Server closed');
       process.exit(0);
     });

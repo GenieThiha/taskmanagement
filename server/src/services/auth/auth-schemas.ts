@@ -30,6 +30,4 @@ export const resetPasswordSchema = Joi.object({
   password: passwordSchema,
 });
 
-export const refreshSchema = Joi.object({
-  refresh_token: Joi.string().required(),
-});
+// Refresh token is now read from the httpOnly cookie; no body schema needed.

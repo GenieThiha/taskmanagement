@@ -10,16 +10,20 @@ if (!isTest) {
   }
 }
 
+// Fallback values are only ever reached in the test environment because the
+// required-variable check above will have thrown for any other environment.
+// Use long, explicit strings so they can never be mistaken for production secrets.
 export const env = {
   NODE_ENV,
   PORT: parseInt(process.env.PORT ?? '3000', 10),
   DATABASE_URL: process.env.DATABASE_URL ?? '',
   REDIS_URL: process.env.REDIS_URL ?? '',
-  JWT_SECRET: process.env.JWT_SECRET ?? 'dev-secret',
-  REFRESH_SECRET: process.env.REFRESH_SECRET ?? 'dev-refresh-secret',
+  JWT_SECRET: process.env.JWT_SECRET ?? 'test-only-jwt-secret-not-for-production-use',
+  REFRESH_SECRET: process.env.REFRESH_SECRET ?? 'test-only-refresh-secret-not-for-production-use',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? '15m',
   REFRESH_EXPIRES_IN: process.env.REFRESH_EXPIRES_IN ?? '7d',
   CORS_ORIGINS: (process.env.CORS_ORIGINS ?? 'http://localhost:5173').split(','),
+  APP_URL: process.env.APP_URL ?? 'http://localhost:5173',
   SES_REGION: process.env.SES_REGION ?? 'ap-southeast-1',
   SES_FROM: process.env.SES_FROM ?? 'noreply@tma.internal',
 };

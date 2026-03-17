@@ -6,7 +6,6 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  refreshSchema,
 } from './auth-schemas';
 import * as authController from './auth-controller';
 
@@ -14,7 +13,8 @@ const router = Router();
 
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
-router.post('/refresh', validate(refreshSchema), authController.refresh);
+// Refresh token arrives via httpOnly cookie — no body validation needed.
+router.post('/refresh', authController.refresh);
 router.post('/logout', authGuard, authController.logout);
 router.post(
   '/forgot-password',

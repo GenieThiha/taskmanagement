@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
 import { User } from '../../models/user.model';
 import { redisClient } from '../../config/redis';
+import { mailer } from '../../config/mailer';
 import { env } from '../../config/env';
 import { logger } from '../../logger/logger';
 
@@ -33,6 +33,19 @@ function issueTokens(userId: string, email: string, role: string): TokenPair {
   );
 
   return { accessToken, refreshToken };
+}
+
+// Safe O(N) Redis key scan using SCAN instead of KEYS so the server is never
+// blocked while iterating a large keyspace.
+async function scanKeys(pattern: string): Promise<string[]> {
+  const found: string[] = [];
+  let cursor = '0';
+  do {
+    const [next, batch] = await redisClient.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+    cursor = next;
+    found.push(...batch);
+  } while (cursor !== '0');
+  return found;
 }
 
 export async function register(data: {
@@ -105,20 +118,20 @@ export async function login(email: string, password: string) {
 
   const tokens = issueTokens(user.id, user.email, user.role ?? 'member');
 
-  // Store refresh token in Redis
+  // Store refresh token JTI in Redis
   const refreshPayload = jwt.decode(tokens.refreshToken) as any;
   await redisClient.set(
     `refresh:${user.id}:${refreshPayload.jti}`,
     '1',
     'EX',
-    7 * 24 * 60 * 60 // 7 days
+    7 * 24 * 60 * 60
   );
 
   const { password_hash: _, ...safeUser } = user.toJSON() as any;
   return { user: safeUser, ...tokens };
 }
 
-export async function refresh(refreshToken: string) {
+export async function refresh(refreshToken: string): Promise<TokenPair> {
   let payload: any;
   try {
     payload = jwt.verify(refreshToken, env.REFRESH_SECRET);
@@ -143,7 +156,7 @@ export async function refresh(refreshToken: string) {
     throw err;
   }
 
-  // Rotate: delete old, issue new
+  // Rotate: delete old refresh key, issue new token pair
   await redisClient.del(key);
 
   const tokens = issueTokens(user.id, user.email, user.role ?? 'member');
@@ -168,8 +181,8 @@ export async function logout(accessToken: string, userId: string) {
       }
     }
 
-    // Delete all refresh tokens for user (simple approach)
-    const keys = await redisClient.keys(`refresh:${userId}:*`);
+    // Delete all refresh tokens for this user using SCAN (non-blocking).
+    const keys = await scanKeys(`refresh:${userId}:*`);
     if (keys.length > 0) {
       await redisClient.del(...keys);
     }
@@ -189,21 +202,13 @@ export async function forgotPassword(email: string) {
   await redisClient.set(`reset:${token}`, user.id, 'EX', RESET_TOKEN_TTL);
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: `email-smtp.${env.SES_REGION}.amazonaws.com`,
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.SES_SMTP_USER,
-        pass: process.env.SES_SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
+    // Use APP_URL env var so the link works in every environment.
+    const resetUrl = `${env.APP_URL}/reset-password?token=${token}`;
+    await mailer.sendMail({
       from: env.SES_FROM,
       to: email,
       subject: 'TMA - Password Reset Request',
-      html: `<p>Click <a href="http://localhost:5173/reset-password?token=${token}">here</a> to reset your password. This link expires in 1 hour.</p>`,
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p>`,
     });
   } catch (err) {
     logger.warn('Failed to send password reset email', { err, email });
