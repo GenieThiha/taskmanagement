@@ -1,6 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import * as taskService from './task-service';
 
+export async function getTaskStats(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const stats = await taskService.getTaskStats();
+    res.json({ data: stats });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getTasks(
   req: Request,
   res: Response,

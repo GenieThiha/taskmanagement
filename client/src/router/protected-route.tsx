@@ -15,12 +15,15 @@ const roleHierarchy: Record<string, number> = {
 
 // Decode the JWT payload and check the `exp` claim (no signature verification —
 // that happens on the server; this is purely a UX redirect to avoid visible 401s).
+// JWTs use base64url (- and _ instead of + and /); normalise before calling atob.
 function isTokenExpired(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const base64url = token.split('.')[1];
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
     return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now();
   } catch {
-    return true;
+    return true; // fail-closed: treat unreadable tokens as expired
   }
 }
 

@@ -9,7 +9,7 @@ import {
   useSensors,
   closestCorners,
 } from '@dnd-kit/core';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Task, TaskStatus, useTaskStore } from '../task-store';
 import { KanbanColumn } from './kanban-column';
@@ -32,12 +32,18 @@ export function KanbanBoard({ tasks }: KanbanBoardProps) {
     })
   );
 
-  const tasksByStatus = STATUSES.reduce<Record<TaskStatus, Task[]>>(
-    (acc, status) => {
-      acc[status] = tasks.filter((t) => t.status === status);
-      return acc;
-    },
-    { todo: [], in_progress: [], review: [], done: [] }
+  // Memoised so the expensive reduce+filter only reruns when the task list
+  // actually changes — not on every drag-over re-render.
+  const tasksByStatus = useMemo(
+    () =>
+      STATUSES.reduce<Record<TaskStatus, Task[]>>(
+        (acc, status) => {
+          acc[status] = tasks.filter((t) => t.status === status);
+          return acc;
+        },
+        { todo: [], in_progress: [], review: [], done: [] }
+      ),
+    [tasks]
   );
 
   const handleDragStart = (event: DragStartEvent) => {

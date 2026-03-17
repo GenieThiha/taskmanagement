@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '../modules/auth/auth-store';
-import { getTasks } from '../api/task-api';
+import { getTasks, getTaskStats } from '../api/task-api';
 import { getNotifications } from '../api/notification-api';
 import { KpiCard } from './kpi-card';
 import { CompletionChart } from './completion-chart';
@@ -25,24 +25,21 @@ export function DashboardPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // All 6 requests fire in parallel — one round trip instead of two sequential waves.
-      const [todoRes, inProgressRes, reviewRes, doneRes, myTasksRes, notifsRes] =
-        await Promise.all([
-          getTasks({ status: 'todo', limit: 1 }),
-          getTasks({ status: 'in_progress', limit: 1 }),
-          getTasks({ status: 'review', limit: 1 }),
-          getTasks({ status: 'done', limit: 1 }),
-          user?.id
-            ? getTasks({ assignee_id: user.id, limit: 1 })
-            : Promise.resolve({ meta: { total: 0 } }),
-          getNotifications(),
-        ]);
+      // 3 requests in parallel: one aggregation query for all status counts
+      // (replaces the previous 4 per-status calls), my-tasks count, notifications.
+      const [statsRes, myTasksRes, notifsRes] = await Promise.all([
+        getTaskStats(),
+        user?.id
+          ? getTasks({ assignee_id: user.id, limit: 1 })
+          : Promise.resolve({ meta: { total: 0 } }),
+        getNotifications(),
+      ]);
 
       const counts: StatusCount[] = [
-        { status: 'todo', count: todoRes.meta?.total ?? 0 },
-        { status: 'in_progress', count: inProgressRes.meta?.total ?? 0 },
-        { status: 'review', count: reviewRes.meta?.total ?? 0 },
-        { status: 'done', count: doneRes.meta?.total ?? 0 },
+        { status: 'todo',        count: statsRes.todo },
+        { status: 'in_progress', count: statsRes.in_progress },
+        { status: 'review',      count: statsRes.review },
+        { status: 'done',        count: statsRes.done },
       ];
 
       setStatusCounts(counts);

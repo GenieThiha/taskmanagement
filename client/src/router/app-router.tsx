@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../modules/auth/auth-store';
+import { useAuth } from '../modules/auth/hooks/use-auth';
 import { ProtectedRoute } from './protected-route';
 import { NotificationBell } from '../notifications/notification-bell';
 import { Avatar } from '../shared/components/avatar';
@@ -35,6 +36,11 @@ const UserListPage = lazy(() =>
 const UserProfilePage = lazy(() =>
   import('../users/user-profile-page').then((m) => ({ default: m.UserProfilePage }))
 );
+const ForgotPasswordPage = lazy(() =>
+  import('../modules/auth/pages/forgot-password-page').then((m) => ({
+    default: m.ForgotPasswordPage,
+  }))
+);
 
 function PageLoader() {
   return (
@@ -44,78 +50,10 @@ function PageLoader() {
   );
 }
 
-function ForgotPasswordPage() {
-  const [email, setEmail] = React.useState('');
-  const [sent, setSent] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { forgotPassword } = await import('../api/auth-api');
-      await forgotPassword(email);
-      setSent(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <h2 className="text-2xl font-bold text-gray-900 text-center">Forgot Password</h2>
-        {sent ? (
-          <div className="card text-center space-y-4">
-            <p className="text-gray-700">
-              If that email exists, a reset link has been sent.
-            </p>
-            <Link to="/login" className="text-primary-600 hover:underline text-sm">
-              Back to login
-            </Link>
-          </div>
-        ) : (
-          <form className="card space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="form-label">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 text-white py-2 rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-            >
-              {loading ? 'Sending…' : 'Send reset link'}
-            </button>
-            <Link to="/login" className="block text-center text-sm text-primary-600 hover:underline">
-              Back to login
-            </Link>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, clearAuth } = useAuthStore();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      const { logout } = await import('../api/auth-api');
-      await logout();
-    } catch {}
-    clearAuth();
-    navigate('/login');
-  };
+  // Delegate to useAuth so logout behaviour (API call, clearAuth, navigate,
+  // toast) is handled in one place — no duplicate logic alongside the hook.
+  const { user, logout: handleLogout } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">

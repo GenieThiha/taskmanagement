@@ -5,6 +5,12 @@ import { useAuthStore } from '../modules/auth/auth-store';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000';
 
+// The WebSocket handshake carries the access token — it must travel over WSS.
+// Refuse to start in a production build without an explicit secure URL.
+if (import.meta.env.PROD && !import.meta.env.VITE_SOCKET_URL) {
+  throw new Error('[TMA] VITE_SOCKET_URL is not set. Production builds require an explicit WSS socket URL.');
+}
+
 interface SocketNotification {
   message?: string;
 }

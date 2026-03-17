@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getTask, addComment, deleteTask } from '../../../api/task-api';
@@ -27,7 +27,9 @@ export function TaskDetailPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
-  const fetchTask = async () => {
+  // Stable reference so the edit-modal onSuccess callback never closes over a
+  // stale version of the function after the component re-renders.
+  const fetchTask = useCallback(async () => {
     if (!id) return;
     try {
       const data = await getTask(id);
@@ -39,11 +41,11 @@ export function TaskDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     fetchTask();
-  }, [id]);
+  }, [fetchTask]);
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();

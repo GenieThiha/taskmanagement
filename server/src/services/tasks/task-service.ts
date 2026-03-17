@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 import { Task, TaskStatus, TaskPriority } from '../../models/task.model';
 import { Comment } from '../../models/comment.model';
 import { User } from '../../models/user.model';
@@ -13,6 +13,29 @@ interface TaskFilters {
   priority?: TaskPriority;
   page?: number;
   limit?: number;
+}
+
+export async function getTaskStats() {
+  // Single aggregation query — returns all four status counts in one round-trip
+  // instead of the four separate filtered requests the dashboard previously used.
+  const rows = (await Task.findAll({
+    attributes: ['status', [fn('COUNT', col('id')), 'count']],
+    where: { is_deleted: false },
+    group: ['status'],
+    raw: true,
+  })) as unknown as Array<{ status: string; count: string }>;
+
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    map[r.status] = parseInt(r.count, 10);
+  }
+
+  return {
+    todo:        map['todo']        ?? 0,
+    in_progress: map['in_progress'] ?? 0,
+    review:      map['review']      ?? 0,
+    done:        map['done']        ?? 0,
+  };
 }
 
 export async function getTasks(filters: TaskFilters) {

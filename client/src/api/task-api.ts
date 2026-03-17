@@ -54,3 +54,16 @@ export async function addComment(taskId: string, body: string) {
   const response = await apiClient.post(`/tasks/${taskId}/comments`, { body });
   return response.data.data;
 }
+
+export interface TaskStats {
+  todo: number;
+  in_progress: number;
+  review: number;
+  done: number;
+}
+
+// Single-request replacement for the four per-status getTasks calls on the dashboard.
+export async function getTaskStats(): Promise<TaskStats> {
+  const response = await apiClient.get('/tasks/stats');
+  return response.data.data;
+}

@@ -3,6 +3,12 @@ import { useAuthStore } from '../modules/auth/auth-store';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/v1';
 
+// Refuse to run in a production build without an explicit HTTPS API URL.
+// A missing variable here would silently send credentials over plain HTTP.
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  throw new Error('[TMA] VITE_API_BASE_URL is not set. Production builds require an explicit HTTPS API URL.');
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
