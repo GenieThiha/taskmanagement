@@ -28,9 +28,13 @@ export function useSocket(onNotification?: (notification: SocketNotification) =>
   useEffect(() => {
     if (!accessToken) return;
 
+    // Start with polling so the connection is guaranteed before upgrading to
+    // WebSocket. Listing WebSocket first causes a harmless-but-noisy
+    // "WebSocket closed before connection established" error in the console
+    // on every page load because the upgrade races the initial handshake.
     const socket: Socket = io(SOCKET_URL, {
       auth: { token: accessToken },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
     });
 
     socket.on('connect', () => {

@@ -10,7 +10,7 @@ if (!root) throw new Error('Root element not found');
 
 createRoot(root).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AppRouter />
       <Toaster
         position="top-right"
