@@ -28,7 +28,7 @@ services:
   server:
     build:
       context: ./server
-      target: production
+      target: development
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,18 +49,34 @@ services:
       APP_URL: http://localhost:5173
       SES_REGION: ap-southeast-1
       SES_FROM: noreply@tma.internal
+    volumes:
+      # Mount source for nodemon hot-reload; keep container's node_modules.
+      - ./server/src:/app/src
+      - /app/node_modules
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   client:
     build:
       context: ./client
+      target: development
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     ports:
       - '5173:5173'
     environment:
       VITE_API_BASE_URL: http://localhost:3000/v1
       VITE_SOCKET_URL: http://localhost:3000
+    volumes:
+      # Mount source for Vite HMR; keep container's node_modules.
+      - ./client/src:/app/src
+      - /app/node_modules
     restart: unless-stopped
 
 volumes:
