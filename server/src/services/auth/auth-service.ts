@@ -227,3 +227,26 @@ export async function resetPassword(token: string, newPassword: string) {
   await User.unscoped().update({ password_hash }, { where: { id: userId } });
   await redisClient.del(`reset:${token}`);
 }
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  const user = await User.scope('withPassword').findByPk(userId);
+  if (!user) {
+    const err = new Error('User not found');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) {
+    const err = new Error('Current password is incorrect');
+    (err as any).status = 400;
+    throw err;
+  }
+
+  const password_hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await user.update({ password_hash });
+}

@@ -6,6 +6,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from './auth-schemas';
 import * as authController from './auth-controller';
 
@@ -25,6 +26,12 @@ router.patch(
   '/reset-password',
   validate(resetPasswordSchema),
   authController.resetPassword
+);
+router.patch(
+  '/change-password',
+  authGuard,
+  validate(changePasswordSchema),
+  authController.changePassword
 );
 
 export default router;

@@ -113,3 +113,20 @@ export async function resetPassword(
     next(err);
   }
 }
+
+export async function changePassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await authService.changePassword(
+      req.user!.sub,
+      req.body.current_password,
+      req.body.new_password
+    );
+    res.json({ data: { message: 'Password changed successfully.' } });
+  } catch (err) {
+    next(err);
+  }
+}

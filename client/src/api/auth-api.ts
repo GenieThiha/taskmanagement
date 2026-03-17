@@ -44,3 +44,11 @@ export async function resetPassword(token: string, password: string) {
   });
   return response.data.data;
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const response = await apiClient.patch('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+  return response.data.data;
+}
