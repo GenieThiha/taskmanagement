@@ -65,7 +65,7 @@ export function UserProfilePage() {
     );
   }
 
-  if (!profile) return <div className="p-6 text-gray-500">User not found.</div>;
+  if (!profile) return <div className="p-6 text-gray-500 dark:text-gray-400">User not found.</div>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -74,16 +74,16 @@ export function UserProfilePage() {
           <Avatar fullName={profile.full_name} size="lg" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">{profile.full_name}</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{profile.full_name}</h1>
               <Badge type="role" value={profile.role} />
               {!profile.is_active && (
-                <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">
+                <span className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">
                   Inactive
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500">{profile.email}</p>
-            <p className="text-xs text-gray-400">Member since {formatDate(profile.created_at)}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Member since {formatDate(profile.created_at)}</p>
           </div>
         </div>
 

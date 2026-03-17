@@ -50,9 +50,9 @@ export function UserListPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
         <select
-          className="border border-gray-200 rounded-md px-3 py-1.5 text-sm"
+          className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
         >
@@ -74,20 +74,20 @@ export function UserListPage() {
               <Avatar fullName={user.full_name} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-900">{user.full_name}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{user.full_name}</p>
                   <Badge type="role" value={user.role} />
                   {!user.is_active && (
-                    <span className="text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded">
+                    <span className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">
                       Inactive
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{user.email}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
               </div>
             </div>
           ))}
           {users.length === 0 && (
-            <p className="text-center py-12 text-gray-500">No users found</p>
+            <p className="text-center py-12 text-gray-500 dark:text-gray-400">No users found</p>
           )}
         </div>
       )}
@@ -101,7 +101,7 @@ export function UserListPage() {
           >
             Previous
           </Button>
-          <span className="flex items-center text-sm text-gray-600 px-3">
+          <span className="flex items-center text-sm text-gray-600 dark:text-gray-400 px-3">
             Page {page} of {totalPages}
           </span>
           <Button

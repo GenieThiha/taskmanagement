@@ -59,7 +59,7 @@ export function ProjectListPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
         {canCreate && (
           <Button variant="primary" onClick={() => setShowCreate(true)}>
             + New Project
@@ -77,13 +77,13 @@ export function ProjectListPage() {
             <div key={project.id} className="card flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="font-semibold text-gray-900">{project.name}</h2>
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">{project.name}</h2>
                   <Badge type="status" value={project.status} />
                 </div>
                 {project.description && (
-                  <p className="text-sm text-gray-500 line-clamp-1">{project.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{project.description}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   Owner: {project.owner?.full_name} · Created {formatDate(project.created_at)}
                 </p>
               </div>
@@ -99,7 +99,7 @@ export function ProjectListPage() {
             </div>
           ))}
           {projects.length === 0 && (
-            <p className="text-center py-12 text-gray-500">No projects found</p>
+            <p className="text-center py-12 text-gray-500 dark:text-gray-400">No projects found</p>
           )}
         </div>
       )}
@@ -114,7 +114,7 @@ export function ProjectListPage() {
           >
             Previous
           </Button>
-          <span className="flex items-center text-sm text-gray-600 px-3">
+          <span className="flex items-center text-sm text-gray-600 dark:text-gray-400 px-3">
             Page {page} of {totalPages}
           </span>
           <Button
