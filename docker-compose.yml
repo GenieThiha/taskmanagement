@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: tma
+      POSTGRES_PASSWORD: tma
+      POSTGRES_DB: tma_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tma -d tma_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      target: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://tma:tma@postgres:5432/tma_dev
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-not-for-production
+      REFRESH_SECRET: dev-refresh-secret-not-for-production
+      JWT_EXPIRES_IN: 15m
+      REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: http://localhost:5173
+      SES_REGION: ap-southeast-1
+      SES_FROM: noreply@tma.internal
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+    depends_on:
+      - server
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_BASE_URL: http://localhost:3000/v1
+      VITE_SOCKET_URL: http://localhost:3000
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

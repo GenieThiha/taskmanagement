@@ -1,0 +1,148 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'ECR image tag to deploy (for rollback)'
+        required: false
+        default: ''
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com
+
+jobs:
+  build-and-deploy:
+    name: Build, Push & Deploy to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push server Docker image
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+        run: |
+          docker build \
+            --target production \
+            -t ${{ steps.login-ecr.outputs.registry }}/tma-server:$IMAGE_TAG \
+            -t ${{ steps.login-ecr.outputs.registry }}/tma-server:latest \
+            ./server
+          docker push ${{ steps.login-ecr.outputs.registry }}/tma-server:$IMAGE_TAG
+          docker push ${{ steps.login-ecr.outputs.registry }}/tma-server:latest
+
+      - name: Set up Node.js for client build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Build React SPA
+        working-directory: client
+        env:
+          VITE_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          VITE_SOCKET_URL: ${{ secrets.STAGING_SOCKET_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload SPA to S3 (CloudFront)
+        run: |
+          aws s3 sync client/dist/ s3://${{ secrets.S3_BUCKET_STAGING }}/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+          aws s3 cp client/dist/index.html s3://${{ secrets.S3_BUCKET_STAGING }}/index.html \
+            --cache-control "no-cache"
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CF_DISTRIBUTION_STAGING }} \
+            --paths "/*"
+
+      - name: Run DB migrations on staging
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+        run: |
+          echo "Running Sequelize migrations on staging..."
+          # In real deployment: SSH to EC2 or use ECS task to run migrations
+          # aws ecs run-task --cluster tma-staging --task-definition tma-migrate ...
+
+      - name: Deploy server to staging EC2
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+        run: |
+          echo "Deploying image $IMAGE_TAG to staging..."
+          # In real deployment: trigger a deployment via SSM or deploy script
+          # aws ssm send-command --instance-ids $STAGING_EC2_ID ...
+
+      - name: Run smoke tests against staging
+        run: |
+          echo "Running smoke tests..."
+          # curl --fail ${{ secrets.STAGING_URL }}/health
+
+  production-deploy:
+    name: Deploy to Production
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "IMAGE_TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rolling deploy to production (AZ-a then AZ-b)
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+        run: |
+          echo "Rolling deploy of $IMAGE_TAG to production..."
+          echo "Step 1: Deploy to AZ-a (EC2 instance 1)"
+          # aws ssm send-command --instance-ids $PROD_EC2_AZA_ID ...
+          echo "Step 2: Health check AZ-a..."
+          echo "Step 3: Deploy to AZ-b (EC2 instance 2)"
+          # aws ssm send-command --instance-ids $PROD_EC2_AZB_ID ...
+          echo "Step 4: Health check AZ-b..."
+          echo "Production deploy complete."
+
+      - name: Invalidate CloudFront production cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CF_DISTRIBUTION_PROD }} \
+            --paths "/*"

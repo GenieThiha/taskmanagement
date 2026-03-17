@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    name: Lint, Test & Audit
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tma
+          POSTGRES_PASSWORD: tma
+          POSTGRES_DB: tma_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      # Server
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Lint server
+        working-directory: server
+        run: npm run lint
+
+      - name: Test server
+        working-directory: server
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://tma:tma@localhost:5432/tma_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-jwt-secret
+          REFRESH_SECRET: test-refresh-secret
+        run: npm test
+
+      - name: Audit server (high severity)
+        working-directory: server
+        run: npm audit --audit-level=high
+
+      # Client
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Lint client
+        working-directory: client
+        run: npm run lint
+
+      - name: Test client
+        working-directory: client
+        run: npm test
+
+      - name: Audit client (high severity)
+        working-directory: client
+        run: npm audit --audit-level=high
