@@ -36,11 +36,11 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 text-center">TMA-2026</h1>
-          <h2 className="mt-2 text-center text-xl text-gray-600">Sign in to your account</h2>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 text-center">TMA-2026</h1>
+          <h2 className="mt-2 text-center text-xl text-gray-600 dark:text-gray-400">Sign in to your account</h2>
         </div>
         <form className="mt-8 space-y-6 card" onSubmit={handleSubmit}>
           <Input
@@ -72,7 +72,7 @@ export function LoginPage() {
           <Button type="submit" variant="primary" className="w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-gray-600 dark:text-gray-400">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
               Register

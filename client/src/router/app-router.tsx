@@ -1,10 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../modules/auth/auth-store';
 import { useAuth } from '../modules/auth/hooks/use-auth';
 import { ProtectedRoute } from './protected-route';
 import { NotificationBell } from '../notifications/notification-bell';
 import { Avatar } from '../shared/components/avatar';
+import { ThemeToggle } from '../shared/components/theme-toggle';
+import { useThemeStore } from '../shared/stores/theme-store';
 
 // Route-level code splitting: each page is its own chunk, downloaded on demand.
 const LoginPage = lazy(() =>
@@ -58,46 +60,47 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center gap-4">
         <Link to="/dashboard" className="text-lg font-bold text-primary-600">
           TMA
         </Link>
         <div className="flex items-center gap-1 ml-2">
           <Link
             to="/dashboard"
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
           >
             Dashboard
           </Link>
           <Link
             to="/tasks"
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
           >
             Tasks
           </Link>
           <Link
             to="/projects"
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
           >
             Projects
           </Link>
           {user?.role === 'admin' && (
             <Link
               to="/users"
-              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
             >
               Users
             </Link>
           )}
         </div>
         <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
           <NotificationBell />
           <Link to={`/users/${user?.id}`}>
             <Avatar fullName={user?.full_name ?? 'User'} size="sm" />
           </Link>
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             Sign out
           </button>
@@ -111,6 +114,18 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 export function AppRouter() {
+  const { isDark } = useThemeStore();
+
+  // Keep the 'dark' class on <html> in sync with the Zustand store.
+  // This runs on every toggle so the DOM stays consistent after hydration.
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>

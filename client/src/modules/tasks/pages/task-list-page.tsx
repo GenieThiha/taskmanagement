@@ -38,17 +38,17 @@ export function TaskListPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
         <div className="flex items-center gap-3">
-          <div className="flex border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <button
-              className={`px-3 py-1.5 text-sm ${viewMode === 'kanban' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 text-sm ${viewMode === 'kanban' ? 'bg-primary-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
               onClick={() => setViewMode('kanban')}
             >
               Kanban
             </button>
             <button
-              className={`px-3 py-1.5 text-sm ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 text-sm ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
               onClick={() => setViewMode('list')}
             >
               List
@@ -65,7 +65,7 @@ export function TaskListPage() {
         <select
           id="filter-status"
           name="filter-status"
-          className="border border-gray-200 rounded-md px-3 py-1.5 text-sm"
+          className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           value={filters.status ?? ''}
           onChange={(e) => setFilters({ status: e.target.value as TaskStatus || undefined })}
         >
@@ -78,7 +78,7 @@ export function TaskListPage() {
         <select
           id="filter-priority"
           name="filter-priority"
-          className="border border-gray-200 rounded-md px-3 py-1.5 text-sm"
+          className="border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           value={filters.priority ?? ''}
           onChange={(e) => setFilters({ priority: e.target.value as TaskPriority || undefined })}
         >
@@ -101,17 +101,17 @@ export function TaskListPage() {
           {tasks.map((task) => (
             <div key={task.id} className="card flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">{task.title}</p>
-                <p className="text-xs text-gray-500">{task.project?.name}</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{task.title}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{task.project?.name}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 capitalize">{task.status.replace('_', ' ')}</span>
-                <span className="text-xs text-gray-500 capitalize">{task.priority}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{task.status.replace('_', ' ')}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{task.priority}</span>
               </div>
             </div>
           ))}
           {tasks.length === 0 && (
-            <p className="text-center py-12 text-gray-500">No tasks found</p>
+            <p className="text-center py-12 text-gray-500 dark:text-gray-400">No tasks found</p>
           )}
         </div>
       )}
