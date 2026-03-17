@@ -29,34 +29,34 @@ export function NotificationList({ notifications, onMarkRead }: NotificationList
 
   if (notifications.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-gray-500">
+      <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
         No notifications yet
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-gray-100 dark:divide-gray-700">
       {notifications.map((n) => (
         <div
           key={n.id}
-          className={`p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors ${
+          className={`p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
             n.is_read ? 'opacity-60' : ''
           }`}
         >
           <div
             className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-              n.is_read ? 'bg-gray-300' : 'bg-blue-500'
+              n.is_read ? 'bg-gray-300 dark:bg-gray-600' : 'bg-blue-500'
             }`}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-800">{n.message}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{formatDateTime(n.created_at)}</p>
+            <p className="text-sm text-gray-800 dark:text-gray-100">{n.message}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDateTime(n.created_at)}</p>
           </div>
           {!n.is_read && (
             <button
               onClick={() => handleMarkRead(n.id)}
-              className="text-xs text-primary-600 hover:text-primary-800 shrink-0"
+              className="text-xs text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 shrink-0"
             >
               Mark read
             </button>
