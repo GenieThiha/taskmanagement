@@ -50,9 +50,9 @@ services:
       SES_REGION: ap-southeast-1
       SES_FROM: noreply@tma.internal
     volumes:
-      # Mount source for nodemon hot-reload; keep container's node_modules.
+      # Mount only src/ for nodemon hot-reload.
+      # node_modules stays as built inside the container (linux-native binaries).
       - ./server/src:/app/src
-      - /app/node_modules
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
       interval: 15s
@@ -74,9 +74,9 @@ services:
       VITE_API_BASE_URL: http://localhost:3000/v1
       VITE_SOCKET_URL: http://localhost:3000
     volumes:
-      # Mount source for Vite HMR; keep container's node_modules.
+      # Mount only src/ for Vite HMR.
+      # node_modules stays as built inside the container (linux-native binaries).
       - ./client/src:/app/src
-      - /app/node_modules
     restart: unless-stopped
 
 volumes:
