@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { UserRole } from '../../models/user.model';
 import * as taskService from './task-service';
 
 export async function getTaskStats(
@@ -63,7 +64,12 @@ export async function updateTask(
   next: NextFunction
 ): Promise<void> {
   try {
-    const task = await taskService.updateTask(req.params.id, req.body);
+    const task = await taskService.updateTask(
+      req.params.id,
+      req.body,
+      req.user!.sub,
+      req.user!.role as UserRole
+    );
     res.json({ data: task });
   } catch (err) {
     next(err);
@@ -76,7 +82,12 @@ export async function patchTask(
   next: NextFunction
 ): Promise<void> {
   try {
-    const task = await taskService.patchTask(req.params.id, req.body);
+    const task = await taskService.patchTask(
+      req.params.id,
+      req.body,
+      req.user!.sub,
+      req.user!.role as UserRole
+    );
     res.json({ data: task });
   } catch (err) {
     next(err);

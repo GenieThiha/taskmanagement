@@ -42,8 +42,9 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
         return;
       }
     } catch (err) {
-      logger.warn('Socket blocklist check failed', { err });
-      // Fail open only if Redis is unavailable — token signature is still valid.
+      logger.error('Socket blocklist check failed — rejecting connection', { err });
+      next(new Error('Internal server error'));
+      return;
     }
 
     (socket as any).user = payload;

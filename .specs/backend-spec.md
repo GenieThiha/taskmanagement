@@ -161,19 +161,33 @@ export const authRateLimiter = rateLimit({
 5. On success: reset `failed_login_attempts = 0`
 6. Issue access token: `jwt.sign({ sub: user.id, role: user.role, jti: uuid() }, JWT_SECRET, { expiresIn: '15m' })`
 7. Issue refresh token: `jwt.sign({ sub: user.id, jti: uuid() }, REFRESH_SECRET, { expiresIn: '7d' })`
-8. Store refresh token in Redis: `SET refresh:<user.id> <jti> EX 604800`
+8. Store refresh token in Redis: `SET refresh:<user.id>:<jti> 1 EX 604800` (per-session key — supports multiple concurrent devices)
 9. Set httpOnly cookie `refresh_token`; return access token in body
 
 ### Refresh
 1. Read `refresh_token` cookie
 2. `jwt.verify(token, REFRESH_SECRET)`
-3. Validate `jti` against Redis `refresh:<user.id>` — return `401` if mismatch
+3. Validate `jti` against Redis `refresh:<user.id>:<jti>` — return `401` if not found
 4. Issue new access token; rotate refresh token (delete old, store new)
 
 ### Logout
-1. Get `jti` from access token → store in Redis blocklist: `SET blocklist:<jti> 1 EX <remaining_ttl>`
-2. Delete `refresh:<user.id>` from Redis
-3. Clear `refresh_token` cookie
+1. Use `jti` and `exp` from the already-verified `req.user` payload (do **not** re-decode the raw token)
+2. Compute remaining TTL: `exp - Math.floor(Date.now() / 1000)`; if `> 0` → `SET blocklist:<jti> 1 EX <ttl>`
+3. Delete all `refresh:<user.id>:*` keys from Redis via non-blocking `SCAN` (supports multiple concurrent sessions)
+4. Clear `refresh_token` httpOnly cookie
+
+---
+
+## Task Service Authorization
+
+Authorization is enforced at the **service layer**, in addition to route-level `requireRole` guards:
+
+| Operation | Route guard | Service check |
+|-----------|-------------|---------------|
+| `GET /tasks`, `GET /tasks/:id` | `authGuard` only | None |
+| `POST /tasks` | `authGuard` only | Project must not be `archived` (returns `400` if archived) |
+| `PUT /tasks/:id`, `PATCH /tasks/:id` | `authGuard` only | `member` may only update tasks where `reporter_id === req.user.sub`; manager/admin unrestricted |
+| `DELETE /tasks/:id` | `requireRole('manager')` | Sequelize soft-delete |
 
 ---
 
@@ -200,42 +214,22 @@ async function notify(type, referenceId, referenceType, recipientIds, message) {
 
 ### Due-soon job (node-cron)
 
-```ts
-// Runs every hour
-cron.schedule('0 * * * *', async () => {
-  const tasks = await Task.findAll({
-    where: {
-      due_date: { [Op.between]: [now, now + 24h] },
-      status: { [Op.ne]: 'done' },
-      is_deleted: false,
-    }
-  })
-  for (const task of tasks) {
-    await notify('task_due_soon', task.id, 'task', [task.assignee_id], `Task "${task.title}" is due soon.`)
-  }
-})
-```
+- Runs every hour (`0 * * * *`)
+- Queries tasks where `due_date BETWEEN now AND now+24h`, `status != 'done'`, `is_deleted = false`, `assignee_id IS NOT NULL`
+- Uses a Redis dedup key `notified_due_soon:<task_id>` (TTL 25 h, set with `NX`) to prevent duplicate notifications across consecutive hourly runs
+- Notifications are sent in **parallel** via `Promise.all` — not serially
 
 ---
 
 ## Socket.io Server (socket-server.ts)
 
-```ts
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token
-  try {
-    const payload = jwt.verify(token, JWT_SECRET)
-    socket.data.user = payload
-    next()
-  } catch {
-    next(new Error('Unauthorized'))
-  }
-})
+Authentication middleware (mirrors `authGuard`):
 
-io.on('connection', (socket) => {
-  socket.join(`user:${socket.data.user.sub}`)
-})
-```
+1. Require `socket.handshake.auth.token`; reject with `'Authentication required'` if absent
+2. `jwt.verify(token, JWT_SECRET)` — reject with `'Invalid token'` if invalid/expired
+3. Check Redis `blocklist:<jti>` — reject with `'Token has been invalidated'` if found
+4. If the Redis check **throws** (Redis unavailable) — reject with `'Internal server error'` (**fail closed**)
+5. On success: attach payload to `socket.user`; join room `user:<sub>`
 
 ---
 
@@ -294,5 +288,21 @@ npm run test:coverage             # coverage report
 - Integration tests for route handlers via Supertest (real DB in Docker Compose test profile)
 - Auth flow (login, refresh, logout, lockout) must have integration test coverage
 - Joi schema validation tested via unit tests
+- Task authorization (member ownership check, manager-only delete) must have integration test coverage
 
 **Coverage targets:** 80% lines across services and middleware.
+
+---
+
+## Health Check
+
+`GET /health` — no auth required; **not** logged by Morgan.
+
+Probes both PostgreSQL (`sequelize.authenticate()`) and Redis (`redisClient.ping()`).
+
+| Result | HTTP status | Body |
+|--------|-------------|------|
+| Both healthy | `200 OK` | `{ "status": "ok", "timestamp": "<ISO 8601>" }` |
+| Either unhealthy | `503 Service Unavailable` | `{ "status": "error", "timestamp": "<ISO 8601>" }` |
+
+ALB uses this endpoint for instance health checks (interval 30 s, threshold 2 failures). A `503` removes the instance from the target group.

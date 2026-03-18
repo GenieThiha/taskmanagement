@@ -80,6 +80,21 @@ tasks ──< notifications (reference_id where reference_type = 'task')
 - `DELETE /tasks/:id` sets `is_deleted = true`; exclude from all queries by default
 - Notification SVC fires async on `assignee_id` change or `status` change
 - `due_date` triggers a `due_soon` notification 24 hours before via node-cron
+- Tasks may not be created under a project with `status = 'archived'`
+
+**Indexes** (in addition to PK):
+
+| Index | Columns | Purpose |
+|-------|---------|---------|
+| Single | `project_id` | FK lookup |
+| Single | `assignee_id` | FK lookup |
+| Single | `reporter_id` | FK lookup |
+| Single | `status` | Status filter |
+| Single | `is_deleted` | Soft-delete filter |
+| Single | `due_date` | Due-date range filter |
+| Composite | `(project_id, status, is_deleted)` | Task list by project |
+| Composite | `(assignee_id, status, is_deleted)` | Task list by assignee |
+| Composite | `(due_date, status, is_deleted)` | Due-soon cron job query |
 
 ---
 

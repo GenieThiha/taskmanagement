@@ -78,8 +78,7 @@ export async function logout(
   next: NextFunction
 ): Promise<void> {
   try {
-    const token = req.headers.authorization?.slice(7) ?? '';
-    await authService.logout(token, req.user!.sub);
+    await authService.logout(req.user!.jti, req.user!.exp, req.user!.sub);
     // Clear the httpOnly cookie on logout.
     res.clearCookie(REFRESH_COOKIE, { ...refreshCookieOptions, maxAge: 0 });
     res.status(204).send();
@@ -107,7 +106,7 @@ export async function resetPassword(
   next: NextFunction
 ): Promise<void> {
   try {
-    await authService.resetPassword(req.body.token, req.body.password);
+    await authService.resetPassword(req.body.token, req.body.new_password);
     res.json({ data: { message: 'Password reset successful.' } });
   } catch (err) {
     next(err);

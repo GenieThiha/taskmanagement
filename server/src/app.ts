@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { sequelize } from './models';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import { helmetConfig } from './middleware/helmet-config';
@@ -7,6 +8,7 @@ import { globalRateLimiter, authRateLimiter } from './middleware/rate-limit';
 import { authGuard } from './middleware/auth-guard';
 import { morganStream } from './logger/morgan-stream';
 import { logger } from './logger/logger';
+import { redisClient } from './config/redis';
 
 import authRouter from './services/auth/auth-router';
 import taskRouter from './services/tasks/task-router';
@@ -52,9 +54,15 @@ export function createApp() {
   // 10. Notification routes
   app.use('/v1/notifications', globalRateLimiter, authGuard, notificationRouter);
 
-  // 11. Health check
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok' });
+  // 11. Health check — probes DB and Redis so the ALB detects dependency outages
+  app.get('/health', async (_req: Request, res: Response) => {
+    try {
+      await sequelize.authenticate();
+      await redisClient.ping();
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    } catch {
+      res.status(503).json({ status: 'error', timestamp: new Date().toISOString() });
+    }
   });
 
   // 12. Global error handler (last)

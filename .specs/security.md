@@ -10,10 +10,10 @@ All requirements in this document are non-negotiable and derived from the approv
 |-------------|----------------|
 | JWT access token TTL | 15 minutes; signed with `JWT_SECRET` |
 | JWT refresh token TTL | 7 days; signed with separate `REFRESH_SECRET` |
-| Refresh token storage | Redis only — key `refresh:<user_id>` with TTL 7d |
-| Logout invalidation | Access token `jti` added to Redis blocklist; refresh token deleted |
-| JWT blocklist check | `auth-guard.ts` checks Redis `blocklist:<jti>` on every protected request |
-| RBAC | Roles: `admin > manager > member`; enforced in `require-role.ts` middleware |
+| Refresh token storage | Redis only — key `refresh:<user_id>:<jti>` per session, TTL 7d (supports multiple concurrent devices) |
+| Logout invalidation | `jti` and `exp` taken from the already-verified `req.user` payload (no re-decode); blocklist entry set with remaining TTL; all `refresh:<user_id>:*` keys deleted via non-blocking SCAN |
+| JWT blocklist check | `auth-guard.ts` checks Redis `blocklist:<jti>` on every protected request; Socket.io auth middleware does the same and **fails closed** if Redis is unavailable |
+| RBAC | Roles: `admin > manager > member`; enforced at route level via `require-role.ts` **and** at service layer for resource ownership (e.g. member may only mutate tasks they created) |
 | Password hashing | `bcrypt` with **cost factor 12** |
 | Account lockout | After **5 consecutive failed logins**: `locked_until = NOW() + 30 min`; return HTTP 423 |
 | Token rotation | New access + refresh tokens issued on every `/auth/refresh` call; old refresh token deleted |
@@ -44,6 +44,7 @@ All requirements in this document are non-negotiable and derived from the approv
 | Secrets management | All secrets loaded from **AWS Secrets Manager** at runtime; never committed to SCM or `.env` files in production |
 | Password exposure | `password_hash` excluded from all Sequelize model `defaultScope` to prevent accidental serialisation |
 | Soft delete | Tasks and users are soft-deleted (`is_deleted` / `is_active` flags); no hard deletes |
+| Inactive user filtering | `is_active = false` users are excluded from all list queries; login is rejected with `401` |
 | Audit trail | Winston + Morgan logs all requests with user ID, IP, method, path, status code |
 
 ---
@@ -73,7 +74,10 @@ Before each release, verify:
 - [ ] `password_hash` not present in any API response (add test assertion)
 - [ ] All new `POST`/`PUT`/`PATCH` routes have a Joi schema applied
 - [ ] New routes behind `authGuard`; role requirements explicit in router
+- [ ] Task mutation routes enforce ownership at service layer (member → reporter_id check)
+- [ ] New tasks cannot be created under archived projects (service layer check)
 - [ ] CORS `CORS_ORIGINS` list reviewed and contains only expected domains
 - [ ] No secrets in code or `.env` files tracked by git
 - [ ] `npm audit` passes with no high/critical vulnerabilities (enforced in CI)
 - [ ] Rate limiter covers any new public endpoints
+- [ ] Socket.io auth middleware fails closed on Redis errors (never fail open)

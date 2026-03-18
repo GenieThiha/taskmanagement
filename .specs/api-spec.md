@@ -365,6 +365,26 @@ Mark a notification as read. **recipient only.**
 
 ---
 
+## Health Endpoint
+
+### GET /health
+
+No authentication required. Used by the ALB for instance health checks.
+
+Probes PostgreSQL and Redis connectivity. Returns `503` if either dependency is unreachable.
+
+**Response:** `200 OK`
+```json
+{ "status": "ok", "timestamp": "ISO 8601" }
+```
+
+**Response (unhealthy):** `503 Service Unavailable`
+```json
+{ "status": "error", "timestamp": "ISO 8601" }
+```
+
+---
+
 ## HTTP Status Code Reference
 
 | Status | Meaning |
@@ -380,3 +400,4 @@ Mark a notification as read. **recipient only.**
 | 423 | Account locked |
 | 429 | Rate limit exceeded |
 | 500 | Internal server error |
+| 503 | Service unavailable (DB or Redis unreachable — health check only) |

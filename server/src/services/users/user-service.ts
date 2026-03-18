@@ -9,7 +9,7 @@ export async function listUsers(filters: {
   const limit = filters.limit ?? 20;
   const offset = (page - 1) * limit;
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { is_active: true };
   if (filters.role) where.role = filters.role;
 
   const { count, rows } = await User.findAndCountAll({

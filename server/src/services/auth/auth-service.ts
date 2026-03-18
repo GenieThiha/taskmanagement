@@ -171,14 +171,11 @@ export async function refresh(refreshToken: string): Promise<TokenPair> {
   return tokens;
 }
 
-export async function logout(accessToken: string, userId: string) {
+export async function logout(jti: string, exp: number, userId: string) {
   try {
-    const payload = jwt.decode(accessToken) as any;
-    if (payload?.jti && payload?.exp) {
-      const ttl = payload.exp - Math.floor(Date.now() / 1000);
-      if (ttl > 0) {
-        await redisClient.set(`blocklist:${payload.jti}`, '1', 'EX', ttl);
-      }
+    const ttl = exp - Math.floor(Date.now() / 1000);
+    if (ttl > 0) {
+      await redisClient.set(`blocklist:${jti}`, '1', 'EX', ttl);
     }
 
     // Delete all refresh tokens for this user using SCAN (non-blocking).

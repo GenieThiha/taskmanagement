@@ -11,10 +11,10 @@ export function validate(schema: Joi.Schema, target: ValidationTarget = 'body') 
     });
 
     if (error) {
-      res.status(422).json({
-        type: 'https://httpstatuses.com/422',
+      res.status(400).json({
+        type: 'https://httpstatuses.com/400',
         title: 'Validation Error',
-        status: 422,
+        status: 400,
         detail: 'Request validation failed',
         errors: error.details.map((d) => ({
           field: d.path.join('.'),

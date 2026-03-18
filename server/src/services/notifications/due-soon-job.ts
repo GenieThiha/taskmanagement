@@ -29,26 +29,25 @@ export function startDueSoonJob(): void {
 
       logger.info(`Found ${tasks.length} tasks due soon`);
 
-      for (const task of tasks) {
-        if (!task.assignee_id) continue;
+      await Promise.all(
+        tasks.map(async (task) => {
+          if (!task.assignee_id) return;
 
-        // Guard against duplicate notifications across hourly runs.
-        // NX = only set if key does not already exist.
-        const dedupKey = `notified_due_soon:${task.id}`;
-        const set = await redisClient.set(dedupKey, '1', 'EX', DEDUP_TTL_SECONDS, 'NX');
-        if (!set) {
-          // Already notified within the dedup window — skip.
-          continue;
-        }
+          // Guard against duplicate notifications across hourly runs.
+          // NX = only set if key does not already exist.
+          const dedupKey = `notified_due_soon:${task.id}`;
+          const set = await redisClient.set(dedupKey, '1', 'EX', DEDUP_TTL_SECONDS, 'NX');
+          if (!set) return; // Already notified within the dedup window
 
-        await notify(
-          'task_due_soon',
-          task.id,
-          'task',
-          [task.assignee_id],
-          `Task "${task.title}" is due within 24 hours`
-        );
-      }
+          await notify(
+            'task_due_soon',
+            task.id,
+            'task',
+            [task.assignee_id],
+            `Task "${task.title}" is due within 24 hours`
+          );
+        })
+      );
     } catch (err) {
       logger.error('Due-soon job error', { err });
     }

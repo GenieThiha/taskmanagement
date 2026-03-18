@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireRole } from '../../middleware/require-role';
 import { validate } from '../../middleware/validate';
 import {
   createTaskSchema,
@@ -20,7 +21,7 @@ router.get('/stats', taskController.getTaskStats);
 router.get('/:id', validate(getTaskQuerySchema, 'query'), taskController.getTask);
 router.put('/:id', validate(updateTaskSchema), taskController.updateTask);
 router.patch('/:id', validate(patchTaskSchema), taskController.patchTask);
-router.delete('/:id', taskController.deleteTask);
+router.delete('/:id', requireRole('manager'), taskController.deleteTask);
 router.post(
   '/:id/comments',
   validate(addCommentSchema),

@@ -1,7 +1,7 @@
 import { Op, fn, col } from 'sequelize';
 import { Task, TaskStatus, TaskPriority } from '../../models/task.model';
 import { Comment } from '../../models/comment.model';
-import { User } from '../../models/user.model';
+import { User, UserRole } from '../../models/user.model';
 import { Project } from '../../models/project.model';
 import { notify } from '../notifications/notification-service';
 import { logger } from '../../logger/logger';
@@ -79,6 +79,18 @@ export async function createTask(
   },
   reporterId: string
 ) {
+  const project = await Project.findByPk(data.project_id, { attributes: ['id', 'status'] });
+  if (!project) {
+    const err = new Error('Project not found');
+    (err as any).status = 404;
+    throw err;
+  }
+  if (project.status === 'archived') {
+    const err = new Error('Cannot create tasks in an archived project');
+    (err as any).status = 400;
+    throw err;
+  }
+
   const task = await Task.create({ ...data, reporter_id: reporterId });
 
   // Async notification if assignee set
@@ -145,12 +157,21 @@ export async function updateTask(
     priority?: TaskPriority;
     due_date?: Date | null;
     status?: TaskStatus;
-  }
+  },
+  requesterId: string,
+  requesterRole: UserRole
 ) {
   const task = await Task.findOne({ where: { id, is_deleted: false } });
   if (!task) {
     const err = new Error('Task not found');
     (err as any).status = 404;
+    throw err;
+  }
+
+  // Members may only update tasks they created
+  if (requesterRole === 'member' && task.reporter_id !== requesterId) {
+    const err = new Error('Forbidden');
+    (err as any).status = 403;
     throw err;
   }
 
@@ -189,8 +210,21 @@ export async function updateTask(
   return task;
 }
 
-export async function patchTask(id: string, data: Partial<typeof updateTask>) {
-  return updateTask(id, data as any);
+export async function patchTask(
+  id: string,
+  data: {
+    title?: string;
+    description?: string | null;
+    project_id?: string;
+    assignee_id?: string | null;
+    priority?: TaskPriority;
+    due_date?: Date | null;
+    status?: TaskStatus;
+  },
+  requesterId: string,
+  requesterRole: UserRole
+) {
+  return updateTask(id, data, requesterId, requesterRole);
 }
 
 export async function deleteTask(id: string) {

@@ -1,7 +1,7 @@
 import Joi from 'joi';
 
 export const createTaskSchema = Joi.object({
-  title: Joi.string().min(1).max(300).required(),
+  title: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(5000).optional().allow('', null),
   project_id: Joi.string().uuid().required(),
   assignee_id: Joi.string().uuid().optional().allow(null),
@@ -15,7 +15,7 @@ export const createTaskSchema = Joi.object({
 });
 
 export const updateTaskSchema = Joi.object({
-  title: Joi.string().min(1).max(300).required(),
+  title: Joi.string().min(1).max(200).required(),
   description: Joi.string().max(5000).optional().allow('', null),
   project_id: Joi.string().uuid().required(),
   assignee_id: Joi.string().uuid().optional().allow(null),
@@ -27,7 +27,7 @@ export const updateTaskSchema = Joi.object({
 });
 
 export const patchTaskSchema = Joi.object({
-  title: Joi.string().min(1).max(300).optional(),
+  title: Joi.string().min(1).max(200).optional(),
   description: Joi.string().max(5000).optional().allow('', null),
   project_id: Joi.string().uuid().optional(),
   assignee_id: Joi.string().uuid().optional().allow(null),
@@ -41,7 +41,7 @@ export const patchTaskSchema = Joi.object({
 }).min(1);
 
 export const addCommentSchema = Joi.object({
-  body: Joi.string().min(1).max(5000).required(),
+  body: Joi.string().min(1).max(2000).required(),
 });
 
 export const getTaskQuerySchema = Joi.object({
