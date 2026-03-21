@@ -345,11 +345,21 @@ npm run test:coverage             # coverage report
 ```
 
 **Test strategy:**
-- Unit tests for services (mock Sequelize models and Redis)
-- Integration tests for route handlers via Supertest (real DB in Docker Compose test profile)
-- Auth flow (login, refresh, logout, lockout) must have integration test coverage
-- Joi schema validation tested via unit tests
-- Task authorization (member ownership check, manager-only delete) must have integration test coverage
+- Unit tests for services — Sequelize models and Redis are **mocked** (no real DB or Redis required)
+- Integration tests for route handlers via **Supertest** — service layer is mocked; tests exercise Express middleware chain (validation, auth guard, role check) end-to-end without a database
+- Auth flow (login, refresh, logout, lockout) covered by route integration tests
+- Joi schema validation covered by dedicated schema unit tests
+
+**Test files (130 tests total):**
+
+| File | Tests | What it covers |
+|------|-------|----------------|
+| `src/services/auth/auth-schemas.test.ts` | 32 | Joi validation: register, login, reset-password, change-password |
+| `src/middleware/auth-guard.test.ts` | 8 | Missing header, bad scheme, expired JWT, Redis blocklist hit |
+| `src/middleware/require-role.test.ts` | 9 | RBAC hierarchy: admin ≥ manager ≥ member; 403 on insufficient role |
+| `src/services/auth/auth-service.test.ts` | 30 | Register, login, lockout, refresh, logout, forgotPassword, resetPassword |
+| `src/services/tasks/task-service.test.ts` | 26 | Member ownership scoping, assignee/reporter access, archived-project guard |
+| `src/services/auth/auth-routes.test.ts` | 25 | Supertest across all 7 auth endpoints (register, login, refresh, logout, forgot, reset, change-password) |
 
 **Coverage targets:** 80% lines across services and middleware.
 

@@ -219,13 +219,22 @@ npm test auth         # run files matching "auth"
 npm run coverage      # coverage report
 ```
 
+**Test files (63 tests total):**
+
+| File | Tests | What it covers |
+|------|-------|----------------|
+| `src/modules/auth/auth-store.test.ts` | 13 | Zustand auth store: setAccessToken, setUser, clearAuth, localStorage partialize |
+| `src/modules/auth/hooks/use-auth.test.ts` | 20 | Session restore on page reload, login, logout, register flows |
+| `src/api/axios-instance.test.ts` | 14 | Bearer injection, 401→refresh→retry, concurrent 401 queue, 5xx body sanitisation |
+| `src/router/protected-route.test.tsx` | 16 | No token redirect, expired token redirect, RBAC enforcement, children render |
+
+All test files are co-located with their source module. Run with `--run` flag in CI to prevent Vitest watch-mode from blocking the pipeline.
+
 **Coverage targets:**
 - Auth hooks and token logic: 90%+
 - Axios interceptor (token refresh flow): 90%+
 - Zustand store actions: 80%+
 - Route guard logic: 80%+
-
-Test files co-located with source: `auth-store.test.ts`, `use-auth.test.ts`, etc.
 
 ---
 

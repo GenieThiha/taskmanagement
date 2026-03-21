@@ -119,9 +119,16 @@ npx sequelize-cli db:migrate          # apply all pending
 npx sequelize-cli db:migrate:undo     # rollback one
 npx sequelize-cli db:seed:all         # load seed data
 
-# Tests
-npm test                              # all tests
-npm run test:coverage                 # with coverage report
+# Tests — server (Jest)
+npm test                              # all tests (watch mode)
+npm test -- --run                     # CI: run once and exit
+npm test -- --testPathPattern auth    # single suite
+npm run test:coverage                 # coverage report
+
+# Tests — client (Vitest)
+npm test                              # all tests (watch mode)
+npm test -- --run                     # CI: run once and exit (required — watch mode exits 1 in CI)
+npm run coverage                      # coverage report
 ```
 
 CI runs lint + unit tests on every feature branch push (GitHub Actions). PR merge to `main` builds and pushes a Docker image to Amazon ECR, then auto-deploys to staging. Production deploy requires a manual approval gate.
@@ -205,6 +212,36 @@ These are non-negotiable requirements from the HLD:
 - CORS restricted to whitelisted origins only (`CORS_ORIGINS` env var); wildcard `*` prohibited
 - Environment secrets via **AWS Secrets Manager** only — never committed to SCM
 - Socket.io auth middleware **fails closed** if Redis is unavailable
+
+---
+
+## Test Suite
+
+**193 tests total** — 130 server (Jest) + 63 client (Vitest).
+
+### Server tests (`server/src/`)
+
+| File | Tests |
+|------|-------|
+| `services/auth/auth-schemas.test.ts` | 32 — Joi validation for all auth endpoints |
+| `middleware/auth-guard.test.ts` | 8 — JWT check, blocklist |
+| `middleware/require-role.test.ts` | 9 — RBAC hierarchy |
+| `services/auth/auth-service.test.ts` | 30 — full auth lifecycle |
+| `services/tasks/task-service.test.ts` | 26 — member scoping, archived-project guard |
+| `services/auth/auth-routes.test.ts` | 25 — Supertest integration (all 7 auth routes) |
+
+Services and Sequelize models are **mocked** — no real DB or Redis required to run tests.
+
+### Client tests (`client/src/`)
+
+| File | Tests |
+|------|-------|
+| `modules/auth/auth-store.test.ts` | 13 — Zustand store |
+| `modules/auth/hooks/use-auth.test.ts` | 20 — session restore, login, logout |
+| `api/axios-instance.test.ts` | 14 — Bearer injection, refresh retry, concurrent 401 queue |
+| `router/protected-route.test.tsx` | 16 — RBAC route guard |
+
+> **CI note:** Always run Vitest with `--run` flag in non-interactive environments. Watch mode exits with code 1 after file deletion.
 
 ---
 
