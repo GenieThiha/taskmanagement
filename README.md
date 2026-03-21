@@ -83,8 +83,8 @@ PostgreSQL 16            Redis 7
 │   └── workflows/
 │       ├── ci.yml           # Lint + test + audit on every feature branch / PR
 │       └── deploy.yml       # Build → ECR → staging (auto) → production (manual gate)
-├── docker-compose.yml       # Local dev: mailhog + postgres + redis + server + client
-└── TMA_HLD_Waterfall.pdf    # Authoritative HLD reference
+├── docker-compose.yml       # Local dev: mailpit + postgres + redis + server + client
+└── Task_Management_Web_Application_Architecture_&_Design.pdf    # Architecture & design reference
 ```
 
 ---
@@ -106,16 +106,16 @@ docker compose up --build
 |---|---|---|
 | React SPA | http://localhost:5173 | Vite HMR — changes to `client/src/` live-reload instantly |
 | Express API | http://localhost:3000 | nodemon — changes to `server/src/` restart automatically |
-| Mailhog (web UI) | http://localhost:8025 | Catches all outbound email in dev — open here to read them |
+| Mailpit (web UI) | http://localhost:8025 | Catches all outbound email in dev — open here to read them |
 | PostgreSQL | localhost:5433 | Host port 5433 avoids clashing with a local PostgreSQL install |
 | Redis | localhost:6379 | Standard port |
 
 The server waits for Postgres and Redis health checks before starting.
 The client waits for the server `/health` endpoint before starting.
 
-### Local email (Mailhog)
+### Local email (Mailpit)
 
-In development all emails (password reset, notifications) are intercepted by **Mailhog** — nothing reaches a real mail server. To read a caught email open **http://localhost:8025** after triggering the action (e.g. forgot-password). No SES credentials are needed locally.
+In development all emails (password reset, notifications) are intercepted by **Mailpit** (`axllent/mailpit` image — ARM64 compatible) — nothing reaches a real mail server. To read a caught email open **http://localhost:8025** after triggering the action (e.g. forgot-password). No SES credentials are needed locally. The Docker service is named `mailhog` for legacy reasons but runs the Mailpit image.
 
 ### Run without Docker
 
@@ -153,8 +153,8 @@ Copy `.env.development` in each service and adjust as needed.
 | `REFRESH_SECRET` | server | always | Refresh token signing key |
 | `APP_URL` | server | always | Base URL for password reset links |
 | `CORS_ORIGINS` | server | always | Comma-separated allowed origins |
-| `SES_SMTP_USER` | server | **production only** | AWS SES SMTP username — dev uses Mailhog |
-| `SES_SMTP_PASS` | server | **production only** | AWS SES SMTP password — dev uses Mailhog |
+| `SES_SMTP_USER` | server | **production only** | AWS SES SMTP username — dev uses Mailpit |
+| `SES_SMTP_PASS` | server | **production only** | AWS SES SMTP password — dev uses Mailpit |
 | `VITE_API_BASE_URL` | client | **production only** | HTTPS API base URL (`/v1`) — build fails without it in prod |
 | `VITE_SOCKET_URL` | client | **production only** | WSS Socket.io URL — build fails without it in prod |
 
@@ -164,17 +164,31 @@ Copy `.env.development` in each service and adjust as needed.
 
 ## Testing
 
-```bash
-# Server
-cd server
-npm test                        # Jest (all suites)
-npm run test:coverage           # with coverage report
+**193 tests total** — 130 server (Jest) + 63 client (Vitest). Services and Sequelize models are mocked; no real DB or Redis required.
 
-# Client
-cd client
-npm test                        # Vitest (all suites)
+```bash
+# Server (from server/)
+npm test -- --run               # CI: run once and exit
+npm test -- --testPathPattern auth  # single suite
+npm run test:coverage
+
+# Client (from client/)
+npm test -- --run               # CI: run once and exit (watch mode exits 1 in CI)
 npm run coverage
 ```
+
+| Suite | File | Tests |
+|---|---|---|
+| Server | `services/auth/auth-schemas.test.ts` | 32 — Joi validation |
+| Server | `middleware/auth-guard.test.ts` | 8 — JWT + blocklist |
+| Server | `middleware/require-role.test.ts` | 9 — RBAC hierarchy |
+| Server | `services/auth/auth-service.test.ts` | 30 — full auth lifecycle |
+| Server | `services/tasks/task-service.test.ts` | 26 — member scoping, archived-project guard |
+| Server | `services/auth/auth-routes.test.ts` | 25 — Supertest integration (all 7 auth routes) |
+| Client | `modules/auth/auth-store.test.ts` | 13 — Zustand store |
+| Client | `modules/auth/hooks/use-auth.test.ts` | 20 — session restore, login, logout |
+| Client | `api/axios-instance.test.ts` | 14 — Bearer injection, refresh retry, concurrent 401 queue |
+| Client | `router/protected-route.test.tsx` | 16 — RBAC route guard |
 
 ---
 
@@ -188,7 +202,7 @@ npm run coverage
 
 | Group | Prefix | Auth | Notes |
 |---|---|---|---|
-| Auth | `/auth` | Public (except `/logout`) | Register, login, refresh, logout, forgot/reset password |
+| Auth | `/auth` | Public (except `/logout`, `/change-password`) | Register, login, refresh, logout, forgot/reset/change password |
 | Tasks | `/tasks` | Required | Full CRUD + `POST /tasks/:id/comments` + `GET /tasks/stats` |
 | Projects | `/projects` | Required | manager+ to create; admin to archive |
 | Users | `/users` | Required | Admin-only list; self or admin for PATCH |
