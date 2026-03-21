@@ -1,6 +1,6 @@
 services:
   mailhog:
-    image: mailhog/mailhog
+    image: axllent/mailpit
     ports:
       - '1025:1025'   # SMTP — server connects here
       - '8025:8025'   # Web UI — open http://localhost:8025 to read caught emails
