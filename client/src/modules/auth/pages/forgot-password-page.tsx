@@ -21,12 +21,12 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full space-y-8">
-        <h2 className="text-2xl font-bold text-gray-900 text-center">Forgot Password</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center">Forgot Password</h2>
         {sent ? (
           <div className="card text-center space-y-4">
-            <p className="text-gray-700">
+            <p className="text-gray-700 dark:text-gray-300">
               If that email exists, a reset link has been sent.
             </p>
             <Link to="/login" className="text-primary-600 hover:underline text-sm">
@@ -41,7 +41,7 @@ export function ForgotPasswordPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 placeholder="you@example.com"
                 required
               />

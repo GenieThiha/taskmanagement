@@ -54,10 +54,10 @@ export function ResetPasswordPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="card max-w-md w-full text-center space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Password Reset!</h2>
-          <p className="text-gray-600">Your password has been updated.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Password Reset!</h2>
+          <p className="text-gray-600 dark:text-gray-400">Your password has been updated.</p>
           <Link to="/login" className="text-primary-600 hover:underline">
             Back to login
           </Link>
@@ -67,12 +67,12 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full space-y-8">
-        <h2 className="text-2xl font-bold text-gray-900 text-center">Reset Password</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 text-center">Reset Password</h2>
         <form className="card space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">
+            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
               {error}
             </p>
           )}
