@@ -27,5 +27,6 @@ router.post(
   validate(addCommentSchema),
   taskController.addComment
 );
+router.delete('/:id/comments/:commentId', taskController.deleteComment);
 
 export default router;

@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../models/user.model';
@@ -195,7 +196,7 @@ export async function forgotPassword(email: string) {
     return;
   }
 
-  const token = uuidv4();
+  const token = crypto.randomBytes(32).toString('hex');
   await redisClient.set(`reset:${token}`, user.id, 'EX', RESET_TOKEN_TTL);
 
   try {
@@ -222,7 +223,15 @@ export async function resetPassword(token: string, newPassword: string) {
 
   const password_hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await User.unscoped().update({ password_hash }, { where: { id: userId } });
+
+  // Single-use: remove the reset key immediately
   await redisClient.del(`reset:${token}`);
+
+  // Revoke all active sessions so old refresh tokens can't be used after a reset
+  const sessionKeys = await scanKeys(`refresh:${userId}:*`);
+  if (sessionKeys.length > 0) {
+    await redisClient.del(...sessionKeys);
+  }
 }
 
 export async function changePassword(

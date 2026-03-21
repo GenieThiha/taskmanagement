@@ -21,7 +21,11 @@ export async function getUser(
   next: NextFunction
 ): Promise<void> {
   try {
-    const user = await userService.getUser(req.params.id);
+    const user = await userService.getUser(
+      req.params.id,
+      req.user!.sub,
+      req.user!.role as UserRole
+    );
     res.json({ data: user });
   } catch (err) {
     next(err);

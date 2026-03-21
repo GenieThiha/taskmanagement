@@ -21,9 +21,11 @@ export function DashboardPage() {
   const [myTasksCount, setMyTasksCount] = useState(0);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       // 3 requests in parallel: one aggregation query for all status counts
       // (replaces the previous 4 per-status calls), my-tasks count, notifications.
@@ -32,7 +34,8 @@ export function DashboardPage() {
         user?.id
           ? getTasks({ assignee_id: user.id, limit: 1 })
           : Promise.resolve({ meta: { total: 0 } }),
-        getNotifications(),
+        // limit=10 at the API level — no need to slice client-side.
+        getNotifications({ limit: 10 }),
       ]);
 
       const counts: StatusCount[] = [
@@ -45,9 +48,9 @@ export function DashboardPage() {
       setStatusCounts(counts);
       setTotalTasks(counts.reduce((sum, c) => sum + c.count, 0));
       setMyTasksCount(myTasksRes.meta?.total ?? 0);
-      setActivity(notifsRes.data?.slice(0, 10) ?? []);
+      setActivity(notifsRes.data ?? []);
     } catch {
-      // Ignore errors on dashboard
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -77,6 +80,11 @@ export function DashboardPage() {
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
+          Failed to load dashboard data. Please{' '}
+          <button onClick={fetchData} className="underline font-medium">try again</button>.
         </div>
       ) : (
         <>

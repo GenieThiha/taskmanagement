@@ -25,7 +25,13 @@ export async function listUsers(filters: {
   };
 }
 
-export async function getUser(id: string) {
+export async function getUser(id: string, requesterId: string, requesterRole: UserRole) {
+  if (requesterRole !== 'admin' && requesterId !== id) {
+    const err = new Error('Forbidden');
+    (err as any).status = 403;
+    throw err;
+  }
+
   const user = await User.findByPk(id);
   if (!user) {
     const err = new Error('User not found');

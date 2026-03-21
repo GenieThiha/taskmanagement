@@ -1,9 +1,12 @@
+import pLimit from 'p-limit';
 import { Notification, NotificationType, NotificationReferenceType } from '../../models/notification.model';
 import { User } from '../../models/user.model';
 import { mailer } from '../../config/mailer';
 import { env } from '../../config/env';
 import { logger } from '../../logger/logger';
 import { getIo } from '../../socket/socket-server';
+
+const emailLimit = pLimit(10);
 
 // Send emails detached from the main DB-write path so that slow or failing
 // SMTP calls don't block or error-out task/project operations.
@@ -19,12 +22,14 @@ async function sendNotificationEmails(
 
   await Promise.all(
     recipients.map((user) =>
-      mailer.sendMail({
-        from: env.SES_FROM,
-        to: user.email,
-        subject: `TMA Notification: ${type.replace(/_/g, ' ')}`,
-        html: `<p>Hello ${user.full_name},</p><p>${message}</p>`,
-      })
+      emailLimit(() =>
+        mailer.sendMail({
+          from: env.SES_FROM,
+          to: user.email,
+          subject: `TMA Notification: ${type.replace(/_/g, ' ')}`,
+          html: `<p>Hello ${user.full_name},</p><p>${message}</p>`,
+        })
+      )
     )
   );
 }

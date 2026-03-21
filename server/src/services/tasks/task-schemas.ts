@@ -2,13 +2,13 @@ import Joi from 'joi';
 
 export const createTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(5000).optional().allow('', null),
+  description: Joi.string().max(10000).optional().allow('', null),
   project_id: Joi.string().uuid().required(),
   assignee_id: Joi.string().uuid().optional().allow(null),
   priority: Joi.string()
     .valid('low', 'medium', 'high', 'critical')
     .default('medium'),
-  due_date: Joi.date().iso().optional().allow(null),
+  due_date: Joi.date().iso().min('now').optional().allow(null),
   status: Joi.string()
     .valid('todo', 'in_progress', 'review', 'done')
     .default('todo'),
@@ -16,11 +16,11 @@ export const createTaskSchema = Joi.object({
 
 export const updateTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).required(),
-  description: Joi.string().max(5000).optional().allow('', null),
+  description: Joi.string().max(10000).optional().allow('', null),
   project_id: Joi.string().uuid().required(),
   assignee_id: Joi.string().uuid().optional().allow(null),
   priority: Joi.string().valid('low', 'medium', 'high', 'critical').required(),
-  due_date: Joi.date().iso().optional().allow(null),
+  due_date: Joi.date().iso().min('now').optional().allow(null),
   status: Joi.string()
     .valid('todo', 'in_progress', 'review', 'done')
     .required(),
@@ -28,13 +28,13 @@ export const updateTaskSchema = Joi.object({
 
 export const patchTaskSchema = Joi.object({
   title: Joi.string().min(1).max(200).optional(),
-  description: Joi.string().max(5000).optional().allow('', null),
+  description: Joi.string().max(10000).optional().allow('', null),
   project_id: Joi.string().uuid().optional(),
   assignee_id: Joi.string().uuid().optional().allow(null),
   priority: Joi.string()
     .valid('low', 'medium', 'high', 'critical')
     .optional(),
-  due_date: Joi.date().iso().optional().allow(null),
+  due_date: Joi.date().iso().min('now').optional().allow(null),
   status: Joi.string()
     .valid('todo', 'in_progress', 'review', 'done')
     .optional(),

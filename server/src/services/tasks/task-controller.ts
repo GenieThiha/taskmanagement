@@ -21,7 +21,11 @@ export async function getTasks(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = await taskService.getTasks(req.query as any);
+    const result = await taskService.getTasks(
+      req.query as any,
+      req.user!.sub,
+      req.user!.role as UserRole
+    );
     res.json(result);
   } catch (err) {
     next(err);
@@ -51,8 +55,32 @@ export async function getTask(
       comment_page?: number;
       comment_limit?: number;
     };
-    const task = await taskService.getTask(req.params.id, comment_page, comment_limit);
+    const task = await taskService.getTask(
+      req.params.id,
+      req.user!.sub,
+      req.user!.role as UserRole,
+      comment_page,
+      comment_limit
+    );
     res.json({ data: task });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteComment(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    await taskService.deleteComment(
+      req.params.id,
+      req.params.commentId,
+      req.user!.sub,
+      req.user!.role as UserRole
+    );
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

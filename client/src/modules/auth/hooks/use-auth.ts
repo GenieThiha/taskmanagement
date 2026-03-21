@@ -11,6 +11,10 @@ export function useAuth() {
   // On mount: if the user profile is persisted but the in-memory token is gone
   // (e.g. page reload), silently restore the session via the httpOnly refresh
   // token cookie. No localStorage reads needed.
+  // Run once on mount only. `user` is read from the Zustand persist layer
+  // synchronously before this effect fires, so the value is stable and an empty
+  // dep array is intentional here (not a stale-closure risk).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (user && !accessToken) {
       authApi

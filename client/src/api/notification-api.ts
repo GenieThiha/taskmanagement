@@ -1,7 +1,7 @@
 import { apiClient } from './axios-instance';
 
-export async function getNotifications() {
-  const response = await apiClient.get('/notifications');
+export async function getNotifications(params?: { limit?: number }) {
+  const response = await apiClient.get('/notifications', { params });
   return response.data;
 }
 

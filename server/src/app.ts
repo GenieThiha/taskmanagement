@@ -65,14 +65,33 @@ export function createApp() {
     }
   });
 
+  // Safe titles that may be shown to callers. Sequelize class names, JWT
+  // internals, and any other implementation detail must never appear here.
+  const SAFE_ERROR_NAMES = new Set([
+    'ValidationError',
+    'NotFoundError',
+    'UnauthorizedError',
+    'ForbiddenError',
+    'ConflictError',
+    'LockedError',
+    'RateLimitError',
+  ]);
+
   // 12. Global error handler (last)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status ?? err.statusCode ?? 500;
     logger.error('Unhandled error', { err: err.message, stack: err.stack });
 
+    const safeTitle =
+      status < 500 && SAFE_ERROR_NAMES.has(err.name)
+        ? err.name
+        : status < 500
+          ? 'RequestError'
+          : 'InternalServerError';
+
     res.status(status).json({
       type: `https://httpstatuses.com/${status}`,
-      title: err.title ?? (status >= 500 ? 'Internal Server Error' : err.message),
+      title: safeTitle,
       status,
       detail: status >= 500 ? 'An unexpected error occurred' : err.message,
     });

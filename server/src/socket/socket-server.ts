@@ -58,7 +58,15 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
     socket.join(room);
     logger.info(`Socket connected: user ${user.sub} joined room ${room}`);
 
+    // Force-disconnect when the access token expires so clients must
+    // reconnect with a fresh token rather than holding a stale session.
+    const msUntilExpiry = user.exp * 1000 - Date.now();
+    const expiryTimer = setTimeout(() => {
+      socket.disconnect(true);
+    }, msUntilExpiry);
+
     socket.on('disconnect', () => {
+      clearTimeout(expiryTimer);
       logger.info(`Socket disconnected: user ${user.sub}`);
     });
   });

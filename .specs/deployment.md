@@ -48,10 +48,11 @@ All EC2, RDS, and ElastiCache resources are inside a **VPC (10.0.0.0/16)** in a 
 ### docker-compose.yml (local dev)
 
 Services:
-- `client` — Vite dev server (port 5173)
-- `server` — Node.js with nodemon (port 3000)
-- `postgres` — PostgreSQL 16 (port 5432)
+- `mailhog` — Mailpit SMTP + web UI (ports 1025 / 8025). Service is named `mailhog` for legacy reasons but uses the `axllent/mailpit` image (ARM64 compatible). Open http://localhost:8025 to read caught emails.
+- `postgres` — PostgreSQL 16 (host port 5433 → container 5432)
 - `redis` — Redis 7 (port 6379)
+- `server` — Node.js with nodemon (port 3000); waits for postgres + redis health checks
+- `client` — Vite dev server with HMR (port 5173); waits for server `/health`
 
 ```yaml
 # Key env vars injected into server container:
@@ -60,6 +61,13 @@ DATABASE_URL: postgresql://tma:tma@postgres:5432/tma_dev
 REDIS_URL: redis://redis:6379
 JWT_SECRET: dev-secret-not-for-production
 REFRESH_SECRET: dev-refresh-secret-not-for-production
+JWT_EXPIRES_IN: 15m
+REFRESH_EXPIRES_IN: 7d
+CORS_ORIGINS: http://localhost:5173
+APP_URL: http://localhost:5173
+SES_REGION: ap-southeast-1
+SES_FROM: noreply@tma.internal
+# No SES_SMTP_USER / SES_SMTP_PASS — mailer falls back to Mailpit in dev
 ```
 
 ### Dockerfile (server)
@@ -101,12 +109,14 @@ PR cannot be merged unless all CI steps pass.
    b. Run: npx sequelize-cli db:migrate  ← pre-deploy step
    c. Restart container
 5. Run smoke tests against staging
-6. [Manual approval gate] — CTO or Lead Architect approves in GitHub Actions UI
-7. Deploy to production EC2 instances (rolling, one AZ at a time)
+6. Run `npm audit --audit-level=high` against the production build artifacts — pipeline fails if any high/critical vulnerabilities are found
+7. [Manual approval gate] — CTO or Lead Architect approves in GitHub Actions UI
+8. Deploy to production EC2 instances (rolling, one AZ at a time)
    a. Drain ALB connections on first instance
    b. Run migration (idempotent)
    c. Restart container
    d. Health check before draining second instance
+   e. Repeat for second instance
 ```
 
 ---

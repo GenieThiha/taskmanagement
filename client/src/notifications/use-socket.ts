@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../modules/auth/auth-store';
+import { refresh as refreshTokens } from '../api/auth-api';
+import { getNotifications } from '../api/notification-api';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000';
 
@@ -24,6 +26,9 @@ export function useSocket(onNotification?: (notification: SocketNotification) =>
   // Keep the latest callback in a ref so the effect closure never goes stale.
   const callbackRef = useRef(onNotification);
   callbackRef.current = onNotification;
+  // Set to true after a server-forced disconnect so the next connect handler
+  // syncs any notifications missed during the gap.
+  const needsSyncRef = useRef(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -37,8 +42,22 @@ export function useSocket(onNotification?: (notification: SocketNotification) =>
       transports: ['polling', 'websocket'],
     });
 
-    socket.on('connect', () => {
+    socket.on('connect', async () => {
       console.info('[Socket] Connected');
+      if (needsSyncRef.current) {
+        needsSyncRef.current = false;
+        // Replay notifications missed during the disconnect window so the
+        // caller's unread count stays accurate.
+        try {
+          const res = await getNotifications({ limit: 20 });
+          const missed: unknown[] = res.data ?? [];
+          missed.forEach((n) => {
+            if (isSocketNotification(n)) callbackRef.current?.(n);
+          });
+        } catch {
+          // Best-effort sync — ignore errors
+        }
+      }
     });
 
     socket.on('notification:new', (raw: unknown) => {
@@ -52,8 +71,22 @@ export function useSocket(onNotification?: (notification: SocketNotification) =>
       console.warn('[Socket] Connection error:', err.message);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async (reason) => {
       console.info('[Socket] Disconnected');
+      if (reason === 'io server disconnect') {
+        // Server forced disconnect — access token expired (server registers a
+        // setTimeout to disconnect on expiry per security spec).
+        // Silently refresh; updating the store causes this effect to re-run,
+        // which tears down this socket and opens a new one with the fresh token.
+        try {
+          const tokens = await refreshTokens();
+          needsSyncRef.current = true;
+          useAuthStore.getState().setAccessToken(tokens.accessToken);
+        } catch {
+          // Refresh failed — Axios interceptor has already called clearAuth()
+          // and redirected to /login.
+        }
+      }
     });
 
     return () => {

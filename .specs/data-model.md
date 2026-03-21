@@ -129,6 +129,13 @@ tasks ──< notifications (reference_id where reference_type = 'task')
 | is_read | BOOLEAN | DEFAULT FALSE, NOT NULL | Read/unread state |
 | created_at | TIMESTAMPTZ | NOT NULL | — |
 
+**Indexes** (in addition to PK):
+
+| Index | Columns | Purpose |
+|-------|---------|---------|
+| Composite | `(recipient_id, is_read, created_at DESC)` | Primary query: unread-first list per user |
+| Single | `recipient_id` | FK lookup |
+
 **Rules:**
 - No `updated_at` — notifications are append-only
 - `PATCH /notifications/:id` sets `is_read = true` (recipient only)

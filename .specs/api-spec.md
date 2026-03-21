@@ -64,8 +64,10 @@ Authenticate and receive JWT tokens.
 **Response:** `200 OK`
 ```json
 {
-  "access_token": "string (JWT, 15 min TTL)",
-  "token_type": "Bearer"
+  "data": {
+    "user": { "id": "uuid", "email": "string", "full_name": "string", "role": "member" },
+    "accessToken": "string (JWT, 15 min TTL)"
+  }
 }
 ```
 
@@ -85,7 +87,7 @@ Exchange refresh token cookie for a new access token.
 
 **Response:** `200 OK`
 ```json
-{ "access_token": "string", "token_type": "Bearer" }
+{ "data": { "accessToken": "string" } }
 ```
 
 ---
@@ -126,13 +128,44 @@ Complete password reset using the emailed token.
 
 ---
 
+### PATCH /auth/change-password
+
+Change password for the currently authenticated user.
+
+**Auth:** Bearer
+
+**Body:**
+```json
+{ "current_password": "string", "new_password": "string (min 8 chars, 1 uppercase, 1 digit)" }
+```
+
+**Response:** `200 OK`
+
+**Error cases:**
+- `400` — `current_password` does not match the stored hash
+
+---
+
 ## Task Endpoints
 
 All require Bearer auth.
 
+### GET /tasks/stats
+
+Return aggregate task counts per status. Used by the dashboard — do not use `GET /tasks` for this purpose.
+
+**Response:** `200 OK`
+```json
+{ "todo": 12, "in_progress": 5, "review": 3, "done": 41 }
+```
+
+---
+
 ### GET /tasks
 
 List tasks with optional filters.
+
+**Access control:** `member` receives only tasks where they are the `assignee_id` or `reporter_id`. `manager` and `admin` receive all tasks system-wide.
 
 **Query params:**
 | Param | Type | Description |
@@ -171,6 +204,8 @@ Create a new task.
 ### GET /tasks/:id
 
 Retrieve a single task with its comments.
+
+**Access control:** Caller must be an `admin`, `manager`, the `assignee_id`, or the `reporter_id` of the task. Returns `403` otherwise.
 
 **Response:** `200 OK`
 ```json
@@ -220,6 +255,16 @@ Soft-delete a task (`is_deleted = true`).
 
 ---
 
+### DELETE /tasks/:id/comments/:commentId
+
+Soft-delete a comment (`is_deleted = true`).
+
+**Access control:** The comment `author_id` may delete their own comment. `admin` may delete any comment. Returns `403` otherwise.
+
+**Response:** `204 No Content`
+
+---
+
 ### POST /tasks/:id/comments
 
 Add a comment to a task.
@@ -254,6 +299,8 @@ List all users. **Admin only.**
 ### GET /users/:id
 
 Retrieve a user profile.
+
+**Access control:** `admin` may retrieve any profile. All other roles may only retrieve their own profile (`id === req.user.sub`). Returns `403` for any other combination.
 
 **Response:** `200 OK` — user object (excludes `password_hash`)
 

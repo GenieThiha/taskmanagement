@@ -5,6 +5,7 @@ import { User, UserRole } from '../../models/user.model';
 import { Project } from '../../models/project.model';
 import { notify } from '../notifications/notification-service';
 import { logger } from '../../logger/logger';
+import pLimit from 'p-limit';
 
 interface TaskFilters {
   project_id?: string;
@@ -38,7 +39,11 @@ export async function getTaskStats() {
   };
 }
 
-export async function getTasks(filters: TaskFilters) {
+export async function getTasks(
+  filters: TaskFilters,
+  requesterId: string,
+  requesterRole: UserRole
+) {
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
   const offset = (page - 1) * limit;
@@ -48,6 +53,14 @@ export async function getTasks(filters: TaskFilters) {
   if (filters.assignee_id) where.assignee_id = filters.assignee_id;
   if (filters.status) where.status = filters.status;
   if (filters.priority) where.priority = filters.priority;
+
+  // Members can only see tasks they are assigned to or reported
+  if (requesterRole === 'member') {
+    where[Op.or as any] = [
+      { assignee_id: requesterId },
+      { reporter_id: requesterId },
+    ];
+  }
 
   const { count, rows } = await Task.findAndCountAll({
     where,
@@ -109,6 +122,8 @@ export async function createTask(
 
 export async function getTask(
   id: string,
+  requesterId: string,
+  requesterRole: UserRole,
   commentPage = 1,
   commentLimit = 20
 ) {
@@ -144,7 +159,43 @@ export async function getTask(
     throw err;
   }
 
+  // Members may only view tasks they are assigned to or reported
+  if (
+    requesterRole === 'member' &&
+    task.assignee_id !== requesterId &&
+    task.reporter_id !== requesterId
+  ) {
+    const err = new Error('Forbidden');
+    (err as any).status = 403;
+    throw err;
+  }
+
   return task;
+}
+
+export async function deleteComment(
+  taskId: string,
+  commentId: string,
+  requesterId: string,
+  requesterRole: UserRole
+) {
+  const comment = await Comment.findOne({
+    where: { id: commentId, task_id: taskId, is_deleted: false },
+  });
+
+  if (!comment) {
+    const err = new Error('Comment not found');
+    (err as any).status = 404;
+    throw err;
+  }
+
+  if (requesterRole !== 'admin' && comment.author_id !== requesterId) {
+    const err = new Error('Forbidden');
+    (err as any).status = 403;
+    throw err;
+  }
+
+  await comment.update({ is_deleted: true });
 }
 
 export async function updateTask(

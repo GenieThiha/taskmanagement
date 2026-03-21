@@ -40,7 +40,7 @@ export async function forgotPassword(email: string) {
 export async function resetPassword(token: string, password: string) {
   const response = await apiClient.patch('/auth/reset-password', {
     token,
-    password,
+    new_password: password,
   });
   return response.data.data;
 }

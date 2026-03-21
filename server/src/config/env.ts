@@ -30,6 +30,16 @@ if (isProduction) {
   }
 }
 
+// Wildcard origins are incompatible with credentials:true and would silently
+// disable cookie-based auth. Reject at startup so misconfiguration is caught
+// immediately rather than at runtime.
+if (!isTest) {
+  const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:5173';
+  if (rawOrigins.split(',').some((o) => o.trim() === '*')) {
+    throw new Error('CORS_ORIGINS must not contain "*" when credentials are enabled');
+  }
+}
+
 // Fallback values are only ever reached in the test environment because the
 // required-variable check above will have thrown for any other environment.
 // Use long, explicit strings so they can never be mistaken for production secrets.

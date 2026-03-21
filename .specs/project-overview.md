@@ -3,7 +3,7 @@
 **Project:** Task Management Web Application (TMA-2026)
 **Code:** TMA-2026
 **Methodology:** Waterfall (Sequential SDLC)
-**Current Phase:** Phase 3 — Design (HLD approved)
+**Current Phase:** Phase 5 — Implementation (complete); Phase 6 — Testing (in progress)
 **Go-Live:** Q3 2026
 **Sponsor:** Chief Technology Officer
 **Classification:** Internal / Confidential
@@ -18,8 +18,9 @@ Internal task manager for small organisations (≤50 users). Supports task creat
 
 ## In Scope
 
-- User authentication and authorisation (login, registration, role management)
+- User authentication and authorisation (login, registration, role management, password reset, change password)
 - Task creation, assignment, prioritisation, and status tracking
+- Kanban board with drag-and-drop status changes
 - Dashboard with summary metrics and activity feed
 - Email & in-app notifications for task events
 - REST API backend with JSON responses
@@ -42,9 +43,9 @@ Internal task manager for small organisations (≤50 users). Supports task creat
 | 1 — Requirements | Business Requirements Document (BRD) v1.0 | Approved |
 | 2 — System Design | Software Requirements Specification (SRS) v1.2 | Approved |
 | 3 — HLD | `TMA_HLD_Waterfall.pdf` v1.0 | Approved |
-| 4 — LLD | Low-Level Design | Pending |
-| 5 — Implementation | Source code | Pending |
-| 6 — Testing | Test Plan | Pending |
+| 4 — LLD | Low-Level Design (`.specs/` directory) | Approved |
+| 5 — Implementation | Source code | **Complete** |
+| 6 — Testing | Test Plan | In progress |
 | 7 — Deployment | Deployment Runbook | Pending |
 
 Each phase gate requires formal sign-off (Lead Architect, Project Manager, CTO, QA Lead) before the next phase begins.
@@ -55,8 +56,8 @@ Each phase gate requires formal sign-off (Lead Architect, Project Manager, CTO, 
 
 | Role | Capabilities |
 |------|-------------|
-| `admin` | Full access; manage users; archive projects; all PATCH /users/:id |
-| `manager` | Create projects; assign tasks; view all team tasks |
-| `member` | Create and manage own tasks; view assigned tasks |
+| `admin` | Full access; manage users (role + active toggle); archive projects; all `PATCH /users/:id` fields |
+| `manager` | Create projects; assign tasks; view all team tasks; update own projects |
+| `member` | Create and manage own tasks; view assigned/reported tasks; update own profile |
 
 Hierarchy: `admin > manager > member`

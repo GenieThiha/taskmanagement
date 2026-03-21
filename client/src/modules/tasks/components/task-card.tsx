@@ -11,7 +11,7 @@ interface TaskCardProps {
   task: Task;
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export const TaskCard = React.memo(function TaskCard({ task }: TaskCardProps) {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
@@ -50,4 +50,4 @@ export function TaskCard({ task }: TaskCardProps) {
       </div>
     </div>
   );
-}
+});
